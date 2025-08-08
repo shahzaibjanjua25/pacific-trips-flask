@@ -363,16 +363,42 @@ def add_lead():
     if request.method == 'POST':
         form = request.form
         lead_id = str(uuid.uuid4())[:8]
+        
+        # Get all required related data
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
+                # Get employee details
+                cursor.execute("SELECT empName, phoneNo FROM employees WHERE empId = ?", 
+                             (form['employeeId'],))
+                employee = cursor.fetchone()
+                if not employee:
+                    flash("Employee not found!", "danger")
+                    return redirect(url_for('add_lead'))
+                
+                # Get customer details
+                cursor.execute("SELECT customerName, phone FROM customers WHERE customerId = ?", 
+                             (form['customerId'],))
+                customer = cursor.fetchone()
+                if not customer:
+                    flash("Customer not found!", "danger")
+                    return redirect(url_for('add_lead'))
+                
+                # Insert with all required fields
                 cursor.execute('''
                     INSERT INTO leads 
-                    (employeeLeadId, employeeId, customerId, status, source, currentAddress, desiredDestination, dateSource, createdAt, updatedAt)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+                    (employeeLeadId, employeeId, employeeName, employeeContactNo,
+                     customerId, customerName, customerContactNo, status, source,
+                     currentAddress, desiredDestination, dateSource,
+                     createdAt, updatedAt)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
                 ''', (
                     lead_id,
                     form['employeeId'],
+                    employee['empName'],
+                    employee['phoneNo'],
                     form['customerId'],
+                    customer['customerName'],
+                    customer['phone'],
                     form['status'],
                     form['source'],
                     form['currentAddress'],
@@ -380,10 +406,13 @@ def add_lead():
                     form['dateSource']
                 ))
                 conn.commit()
-        flash("Lead added!", "success")
+        
+        flash("Lead added successfully!", "success")
         return redirect(url_for('leads'))
 
-    return render_template('add_lead.html', employees=get_all_employees(), customers=get_all_customers())
+    return render_template('add_lead.html', 
+                         employees=get_all_employees(), 
+                         customers=get_all_customers())
 
 @app.route('/leads/edit/<string:lead_id>', methods=['GET', 'POST'])
 def edit_lead(lead_id):
