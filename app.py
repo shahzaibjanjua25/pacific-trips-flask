@@ -429,6 +429,7 @@ def edit_lead(lead_id):
         form = request.form
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
+                # 🟢 Update Lead
                 cursor.execute('''
                     UPDATE leads
                     SET employeeId = ?, customerId = ?, status = ?, source = ?, 
@@ -444,11 +445,29 @@ def edit_lead(lead_id):
                     form['dateSource'],
                     lead_id
                 ))
+
+                # 🔄 Update Customer Table (sync fields)
+                cursor.execute('''
+                    UPDATE customers
+                    SET source = ?, 
+                        currentLocation = ?, 
+                        desiredDestination = ?, 
+                        updatedAt = datetime('now')
+                    WHERE customerId = ?
+                ''', (
+                    form['source'],
+                    form['currentAddress'],
+                    form['desiredDestination'],
+                    form['customerId']
+                ))
+
                 conn.commit()
-        flash("Lead updated!", "info")
+
+        flash("Lead and related customer updated!", "info")
         return redirect(url_for('leads'))
 
     return render_template('edit_lead.html', lead=lead, employees=get_all_employees(), customers=get_all_customers())
+
 
 @app.route('/leads/delete/<string:lead_id>')
 def delete_lead(lead_id):
