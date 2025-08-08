@@ -3,7 +3,7 @@
 {% block content %}
 <h2>Add New Lead</h2>
 
-<form method="POST">
+<form method="POST" id="leadForm">
     <label for="employeeId">Employee:</label>
     <select name="employeeId" id="employeeId" required>
         {% for emp in employees %}
@@ -25,7 +25,7 @@
     </select><br><br>
 
     <label for="status">Status:</label>
-    <select name="status" required>
+    <select name="status" id="status" required onchange="checkStatusChange()">
         {% for s in ['Pending', 'Contacted', 'Lost', 'Willing', 'Paid', 'Refund', 'Confirmed'] %}
         <option value="{{ s }}">{{ s }}</option>
         {% endfor %}
@@ -47,9 +47,22 @@
     <label for="dateSource">Date Source:</label>
     <input type="date" name="dateSource"><br><br>
 
+    <!-- Hidden field for amount -->
+    <input type="hidden" id="amountClosed" name="amountClosed" value="0">
+
     <button type="submit">Create Lead</button>
     <a href="{{ url_for('leads') }}">Cancel</a>
 </form>
+
+<!-- Amount Input Modal -->
+<div id="amountModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h3 id="modalTitle">Enter Amount</h3>
+        <input type="number" id="amountInput" placeholder="Enter amount">
+        <button id="confirmAmount" onclick="confirmAmount()">Confirm</button>
+    </div>
+</div>
 
 <script>
 function updateCustomerDetails() {
@@ -65,9 +78,84 @@ function updateCustomerDetails() {
     }
 }
 
-// Initialize fields if a customer is already selected
+let previousStatus = '';
+
+function checkStatusChange() {
+    const newStatus = document.getElementById('status').value;
+    
+    // If changing to Confirmed
+    if (newStatus === 'Confirmed') {
+        showAmountModal('Enter the closed amount for this lead:');
+    }
+    
+    previousStatus = newStatus;
+}
+
+function showAmountModal(message) {
+    document.getElementById('modalTitle').textContent = message;
+    document.getElementById('amountInput').value = '';
+    document.getElementById('amountModal').style.display = 'block';
+}
+
+function closeModal() {
+    document.getElementById('amountModal').style.display = 'none';
+}
+
+function confirmAmount() {
+    const amount = document.getElementById('amountInput').value;
+    if (amount && !isNaN(amount)) {
+        document.getElementById('amountClosed').value = amount;
+        closeModal();
+    } else {
+        alert('Please enter a valid amount');
+    }
+}
+
+// Close modal if clicked outside
+window.onclick = function(event) {
+    const modal = document.getElementById('amountModal');
+    if (event.target == modal) {
+        closeModal();
+    }
+}
+
+// Initialize fields
 document.addEventListener('DOMContentLoaded', function() {
     updateCustomerDetails();
 });
 </script>
+
+<style>
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 500px;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: black;
+}
+</style>
 {% endblock %}

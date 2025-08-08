@@ -381,12 +381,12 @@ def add_lead():
     if request.method == 'POST':
         form = request.form
         lead_id = str(uuid.uuid4())[:8]
+        amount_closed = float(form.get('amountClosed', 0))
         
-        # Get all required related data
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
                 # Get employee details
-                cursor.execute("SELECT empName, phoneNo FROM employees WHERE empId = ?", 
+                cursor.execute("SELECT empName, phoneNo, achievedAmount FROM employees WHERE empId = ?", 
                              (form['employeeId'],))
                 employee = cursor.fetchone()
                 if not employee:
@@ -401,14 +401,23 @@ def add_lead():
                     flash("Customer not found!", "danger")
                     return redirect(url_for('add_lead'))
                 
-                # Insert with all required fields
+                # Update employee's achieved amount if status is Confirmed
+                if form['status'] == 'Confirmed' and amount_closed > 0:
+                    new_achieved = employee['achievedAmount'] + amount_closed
+                    cursor.execute('''
+                        UPDATE employees 
+                        SET achievedAmount = ?
+                        WHERE empId = ?
+                    ''', (new_achieved, form['employeeId']))
+                
+                # Insert lead
                 cursor.execute('''
                     INSERT INTO leads 
                     (employeeLeadId, employeeId, employeeName, employeeContactNo,
                      customerId, customerName, customerContactNo, status, source,
-                     currentAddress, desiredDestination, dateSource,
+                     currentAddress, desiredDestination, dateSource, amountClosed,
                      createdAt, updatedAt)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
                 ''', (
                     lead_id,
                     form['employeeId'],
@@ -421,8 +430,10 @@ def add_lead():
                     form['source'],
                     form['currentAddress'],
                     form['desiredDestination'],
-                    form['dateSource']
+                    form['dateSource'],
+                    amount_closed if form['status'] == 'Confirmed' else 0
                 ))
+                
                 conn.commit()
         
         flash("Lead added successfully!", "success")
@@ -437,7 +448,9 @@ def edit_lead(lead_id):
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
             cursor.execute("SELECT * FROM leads WHERE employeeLeadId = ?", (lead_id,))
-            lead = cursor.fetchone()
+            lead = dict(cursor.fetchone())
+            cursor.execute("SELECT achievedAmount FROM employees WHERE empId = ?", (lead['employeeId'],))
+            employee = cursor.fetchone()
 
     if not lead:
         flash("Lead not found", "danger")
@@ -445,13 +458,40 @@ def edit_lead(lead_id):
 
     if request.method == 'POST':
         form = request.form
+        amount_closed = float(form.get('amountClosed', 0))
+        previous_amount = float(lead.get('amountClosed', 0))
+        
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
-                # 🟢 Update Lead
+                # Handle amount changes
+                if form['status'] == 'Confirmed':
+                    if lead['status'] != 'Confirmed':
+                        # Status changed to Confirmed - add amount
+                        new_achieved = employee['achievedAmount'] + amount_closed
+                    else:
+                        # Status remains Confirmed - adjust amount
+                        new_achieved = employee['achievedAmount'] - previous_amount + amount_closed
+                else:
+                    if lead['status'] == 'Confirmed':
+                        # Status changed from Confirmed - subtract amount
+                        new_achieved = employee['achievedAmount'] - previous_amount
+                    else:
+                        # Status remains not Confirmed - no change
+                        new_achieved = employee['achievedAmount']
+                
+                # Update employee's achieved amount
+                cursor.execute('''
+                    UPDATE employees 
+                    SET achievedAmount = ?
+                    WHERE empId = ?
+                ''', (new_achieved, lead['employeeId']))
+                
+                # Update lead
                 cursor.execute('''
                     UPDATE leads
                     SET employeeId = ?, customerId = ?, status = ?, source = ?, 
-                        currentAddress = ?, desiredDestination = ?, dateSource = ?, updatedAt = datetime('now')
+                        currentAddress = ?, desiredDestination = ?, dateSource = ?, 
+                        amountClosed = ?, updatedAt = datetime('now')
                     WHERE employeeLeadId = ?
                 ''', (
                     form['employeeId'],
@@ -461,31 +501,19 @@ def edit_lead(lead_id):
                     form['currentAddress'],
                     form['desiredDestination'],
                     form['dateSource'],
+                    amount_closed if form['status'] == 'Confirmed' else 0,
                     lead_id
-                ))
-
-                # 🔄 Update Customer Table (sync fields)
-                cursor.execute('''
-                    UPDATE customers
-                    SET source = ?, 
-                        currentLocation = ?, 
-                        desiredDestination = ?, 
-                        updatedAt = datetime('now')
-                    WHERE customerId = ?
-                ''', (
-                    form['source'],
-                    form['currentAddress'],
-                    form['desiredDestination'],
-                    form['customerId']
                 ))
 
                 conn.commit()
 
-        flash("Lead and related customer updated!", "info")
+        flash("Lead and related employee updated!", "info")
         return redirect(url_for('leads'))
 
-    return render_template('edit_lead.html', lead=lead, employees=get_all_employees(), customers=get_all_customers())
-
+    return render_template('edit_lead.html', 
+                         lead=lead, 
+                         employees=get_all_employees(), 
+                         customers=get_all_customers())
 
 @app.route('/leads/delete/<string:lead_id>')
 def delete_lead(lead_id):
