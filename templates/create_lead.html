@@ -3,7 +3,8 @@
     <select name="employeeId">
         <option value="">All</option>
         {% for emp in filter_options.employees %}
-        <option value="{{ emp.empId }}" {% if filters.employeeId == emp.empId %}selected{% endif %}>{{ emp.empName }}</option>
+        <option value="{{ emp.empId }}" {% if filters.employeeId==emp.empId %}selected{% endif %}>{{ emp.empName }}
+        </option>
         {% endfor %}
     </select>
 
@@ -11,17 +12,19 @@
     <select name="customerId">
         <option value="">All</option>
         {% for cust in filter_options.customers %}
-        <option value="{{ cust.customerId }}" {% if filters.customerId == cust.customerId %}selected{% endif %}>{{ cust.customerName }}</option>
+        <option value="{{ cust.customerId }}" {% if filters.customerId==cust.customerId %}selected{% endif %}>{{
+            cust.customerName }}</option>
         {% endfor %}
     </select>
 
     <label for="status">Status:</label>
     <select name="status">
         <option value="">All</option>
-        {% for s in ['New', 'In Progress', 'Closed'] %}
-        <option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ s }}</option>
+        {% for s in ['Pending', 'Contacted', 'Lost', 'Willing', 'Paid', 'Refund', 'Confirmed'] %}
+        <option value="{{ s }}" {% if filters.status==s %}selected{% endif %}>{{ s }}</option>
         {% endfor %}
     </select>
+
 
     <button type="submit">Filter</button>
     <a href="{{ url_for('add_lead') }}"><button type="button">+ Create Lead</button></a>

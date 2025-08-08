@@ -3,35 +3,46 @@
 {% block content %}
 <h2>Add New Lead</h2>
 
-<form method="POST" action="{{ url_for('add_lead') }}">
-    <label for="name">Lead Name:</label>
-    <input type="text" name="name" required>
+<form method="POST">
+    <label for="employeeId">Employee:</label>
+    <select name="employeeId" required>
+        {% for emp in employees %}
+        <option value="{{ emp.empId }}">{{ emp.empName }}</option>
+        {% endfor %}
+    </select><br><br>
+
+    <label for="customerId">Customer:</label>
+    <select name="customerId" required>
+        {% for cust in customers %}
+        <option value="{{ cust.customerId }}">{{ cust.customerName }}</option>
+        {% endfor %}
+    </select><br><br>
 
     <label for="status">Status:</label>
     <select name="status" required>
-        <option value="New">New</option>
-        <option value="In Progress">In Progress</option>
-        <option value="Converted">Converted</option>
-        <option value="Lost">Lost</option>
-    </select>
-
-    <label for="employee_id">Assigned Employee:</label>
-    <select name="employee_id" required>
-        {% for emp in employees %}
-        <option value="{{ emp['id'] }}">{{ emp['name'] }}</option>
+        {% for s in ['Pending', 'Contacted', 'Lost', 'Willing', 'Paid', 'Refund', 'Confirmed'] %}
+        <option value="{{ s }}">{{ s }}</option>
         {% endfor %}
-    </select>
+    </select><br><br>
 
-    <label for="customer_id">Customer:</label>
-    <select name="customer_id" required>
-        {% for cust in customers %}
-        <option value="{{ cust['id'] }}">{{ cust['name'] }}</option>
+    <label for="source">Source:</label>
+    <select name="source" required>
+        {% for s in ['Facebook', 'WhatsApp', 'Reference', 'TikTok', 'Other'] %}
+        <option value="{{ s }}">{{ s }}</option>
         {% endfor %}
-    </select>
+    </select><br><br>
 
-    <label for="notes">Notes:</label>
-    <textarea name="notes"></textarea>
+
+    <label for="currentAddress">Current Address:</label>
+    <input type="text" name="currentAddress" required><br><br>
+
+    <label for="desiredDestination">Desired Destination:</label>
+    <input type="text" name="desiredDestination" required><br><br>
+
+    <label for="dateSource">Date Source:</label>
+    <input type="date" name="dateSource"><br><br>
 
     <button type="submit">Create Lead</button>
+    <a href="{{ url_for('leads') }}">Cancel</a>
 </form>
 {% endblock %}

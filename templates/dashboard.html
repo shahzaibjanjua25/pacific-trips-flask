@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="dashboard-title">📊 Dashboard</h2>
+
+<div class="dashboard-charts">
+    <div class="chart-container">
+        <canvas id="pieChart"></canvas>
+    </div>
+    <div class="chart-container">
+        <canvas id="barChart"></canvas>
+    </div>
+    <div class="chart-container">
+        <canvas id="lineChart"></canvas>
+    </div>
+    <div class="chart-container">
+        <canvas id="doughnutChart"></canvas>
+    </div>
+    <div class="chart-container">
+        <canvas id="radarChart"></canvas>
+    </div>
+    <div class="chart-container">
+        <canvas id="polarChart"></canvas>
+    </div>
+</div>
+
+<script>
+    // Data from Flask
+    const leadsByStatus = {{ leads_by_status|tojson }};
+    const leadsBySource = {{ leads_by_source|tojson }};
+    const leadsByDate = {{ leads_by_date|tojson }};
+    const totalCustomers = {{ total_customers }};
+    const totalEmployees = {{ total_employees }};
+    const totalLeads = {{ total_leads }};
+
+    // Chart configuration with larger fonts
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                labels: {
+                    font: {
+                        size: 18
+                    }
+                }
+            },
+            title: {
+                display: true,
+                font: {
+                    size: 22
+                }
+            }
+        },
+        scales: {
+            x: {
+                ticks: {
+                    font: {
+                        size: 16
+                    }
+                }
+            },
+            y: {
+                ticks: {
+                    font: {
+                        size: 16
+                    }
+                }
+            }
+        }
+    };
+
+    // Pie Chart - Leads by Status
+    new Chart(document.getElementById('pieChart'), {
+        type: 'pie',
+        data: {
+            labels: leadsByStatus.map(r => r.status),
+            datasets: [{
+                label: 'Leads by Status',
+                data: leadsByStatus.map(r => r.count)
+            }]
+        },
+        options: chartOptions
+    });
+
+    // Bar Chart - Leads by Source
+    new Chart(document.getElementById('barChart'), {
+        type: 'bar',
+        data: {
+            labels: leadsBySource.map(r => r.source),
+            datasets: [{
+                label: 'Leads by Source',
+                data: leadsBySource.map(r => r.count)
+            }]
+        },
+        options: chartOptions
+    });
+
+    // Line Chart - Leads Over Time
+    new Chart(document.getElementById('lineChart'), {
+        type: 'line',
+        data: {
+            labels: leadsByDate.map(r => r.date),
+            datasets: [{
+                label: 'Leads Over Time',
+                data: leadsByDate.map(r => r.count),
+                fill: false,
+                tension: 0.3
+            }]
+        },
+        options: chartOptions
+    });
+
+    // Doughnut Chart - Overall Entity Breakdown
+    new Chart(document.getElementById('doughnutChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Customers', 'Employees', 'Leads'],
+            datasets: [{
+                label: 'Entity Count',
+                data: [totalCustomers, totalEmployees, totalLeads]
+            }]
+        },
+        options: chartOptions
+    });
+
+    // Radar Chart - Status Breakdown
+    new Chart(document.getElementById('radarChart'), {
+        type: 'radar',
+        data: {
+            labels: leadsByStatus.map(r => r.status),
+            datasets: [{
+                label: 'Leads by Status',
+                data: leadsByStatus.map(r => r.count)
+            }]
+        },
+        options: chartOptions
+    });
+
+    // Polar Area Chart - Leads by Source
+    new Chart(document.getElementById('polarChart'), {
+        type: 'polarArea',
+        data: {
+            labels: leadsBySource.map(r => r.source),
+            datasets: [{
+                label: 'Leads by Source',
+                data: leadsBySource.map(r => r.count)
+            }]
+        },
+        options: chartOptions
+    });
+</script>
+{% endblock %}

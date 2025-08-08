@@ -2,36 +2,36 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 import sqlite3
 import os
 import uuid
+from contextlib import closing
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key'
 
-# Fix __file__ issue in environments like Jupyter
+# Database Configuration
 BASE_DIR = os.getcwd()
 DATABASE = os.path.join(BASE_DIR, 'EMS.db')
 
-# -----------------------------
-# Database Connection
-# -----------------------------
 def get_db_connection():
-    conn = sqlite3.connect(DATABASE)
+    conn = sqlite3.connect(DATABASE, timeout=10)
     conn.row_factory = sqlite3.Row
+    # Enable WAL mode for better concurrency
+    conn.execute("PRAGMA journal_mode=WAL")
     return conn
 
 # -----------------------------
 # Utility Functions
 # -----------------------------
 def get_all_employees():
-    conn = get_db_connection()
-    employees = conn.execute("SELECT empId, empName FROM employees").fetchall()
-    conn.close()
-    return employees
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute("SELECT empId, empName FROM employees")
+            return cursor.fetchall()
 
 def get_all_customers():
-    conn = get_db_connection()
-    customers = conn.execute("SELECT customerId, customerName FROM customers").fetchall()
-    conn.close()
-    return customers
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute("SELECT customerId, customerName FROM customers")
+            return cursor.fetchall()
 
 def get_filtered_sorted_leads(employee_id, customer_id, status, sort_by, sort_order):
     query = '''
@@ -57,10 +57,10 @@ def get_filtered_sorted_leads(employee_id, customer_id, status, sort_by, sort_or
 
     query += f' ORDER BY {sort_by} {sort_order.upper()}'
 
-    conn = get_db_connection()
-    leads = conn.execute(query, params).fetchall()
-    conn.close()
-    return leads
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute(query, params)
+            return cursor.fetchall()
 
 # -----------------------------
 # Home Page
@@ -95,48 +95,45 @@ def customers():
 
     query += f" ORDER BY {sort_by} {sort_order.upper()}"
 
-    conn = get_db_connection()
-    c = conn.cursor()
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute(query, params)
+            customers = cursor.fetchall()
 
-    c.execute(query, params)
-    customers = c.fetchall()
-
-    # For dropdowns
-    column_values = {}
-    for col in filters:
-        c.execute(f"SELECT DISTINCT {col} FROM customers ORDER BY {col}")
-        column_values[col] = [row[0] for row in c.fetchall() if row[0]]
-
-    conn.close()
+            # For dropdowns
+            column_values = {}
+            for col in filters:
+                cursor.execute(f"SELECT DISTINCT {col} FROM customers ORDER BY {col}")
+                column_values[col] = [row[0] for row in cursor.fetchall() if row[0]]
 
     return render_template("customers.html",
-                           customers=customers,
-                           filters=filters,
-                           sort_by=sort_by,
-                           sort_order=sort_order,
-                           column_values=column_values)
+                         customers=customers,
+                         filters=filters,
+                         sort_by=sort_by,
+                         sort_order=sort_order,
+                         column_values=column_values)
 
 @app.route('/add_customer', methods=['GET', 'POST'])
 def add_customer():
     if request.method == 'POST':
         new_id = str(uuid.uuid4())[:8]
         form = request.form
-        conn = get_db_connection()
-        conn.execute('''
-            INSERT INTO customers 
-            (customerId, customerName, phone, source, currentLocation, desiredDestination, dateOfArrival)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            new_id,
-            form['customerName'],
-            form['phone'],
-            form['source'],
-            form['currentLocation'],
-            form['desiredDestination'],
-            form['dateOfArrival']
-        ))
-        conn.commit()
-        conn.close()
+        with closing(get_db_connection()) as conn:
+            with closing(conn.cursor()) as cursor:
+                cursor.execute('''
+                    INSERT INTO customers 
+                    (customerId, customerName, phone, source, currentLocation, desiredDestination, dateOfArrival)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    new_id,
+                    form['customerName'],
+                    form['phone'],
+                    form['source'],
+                    form['currentLocation'],
+                    form['desiredDestination'],
+                    form['dateOfArrival']
+                ))
+                conn.commit()
         flash("Customer added!", "success")
         return redirect(url_for('customers'))
 
@@ -144,8 +141,10 @@ def add_customer():
 
 @app.route('/customers/edit/<string:customer_id>', methods=['GET', 'POST'])
 def edit_customer(customer_id):
-    conn = get_db_connection()
-    customer = conn.execute("SELECT * FROM customers WHERE customerId = ?", (customer_id,)).fetchone()
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute("SELECT * FROM customers WHERE customerId = ?", (customer_id,))
+            customer = cursor.fetchone()
 
     if not customer:
         flash("Customer not found.", "danger")
@@ -153,34 +152,34 @@ def edit_customer(customer_id):
 
     if request.method == 'POST':
         form = request.form
-        conn.execute('''
-            UPDATE customers
-            SET customerName = ?, phone = ?, source = ?, currentLocation = ?, 
-                desiredDestination = ?, dateOfArrival = ?
-            WHERE customerId = ?
-        ''', (
-            form['customerName'],
-            form['phone'],
-            form['source'],
-            form['currentLocation'],
-            form['desiredDestination'],
-            form['dateOfArrival'],
-            customer_id
-        ))
-        conn.commit()
-        conn.close()
+        with closing(get_db_connection()) as conn:
+            with closing(conn.cursor()) as cursor:
+                cursor.execute('''
+                    UPDATE customers
+                    SET customerName = ?, phone = ?, source = ?, currentLocation = ?, 
+                        desiredDestination = ?, dateOfArrival = ?
+                    WHERE customerId = ?
+                ''', (
+                    form['customerName'],
+                    form['phone'],
+                    form['source'],
+                    form['currentLocation'],
+                    form['desiredDestination'],
+                    form['dateOfArrival'],
+                    customer_id
+                ))
+                conn.commit()
         flash("Customer updated!", "info")
         return redirect(url_for('customers'))
 
-    conn.close()
     return render_template('edit_customer.html', customer=customer)
 
 @app.route('/customers/delete/<string:customer_id>')
 def delete_customer(customer_id):
-    conn = get_db_connection()
-    conn.execute("DELETE FROM customers WHERE customerId = ?", (customer_id,))
-    conn.commit()
-    conn.close()
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute("DELETE FROM customers WHERE customerId = ?", (customer_id,))
+            conn.commit()
     flash("Customer deleted!", "success")
     return redirect(url_for('customers'))
 
@@ -218,43 +217,42 @@ def employees():
 
     query += f" ORDER BY {sort_by} {sort_order.upper()}"
 
-    conn = get_db_connection()
-    employees = conn.execute(query, params).fetchall()
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute(query, params)
+            employees = cursor.fetchall()
 
-    column_values = {
-        'empName': [row['empName'] for row in conn.execute("SELECT DISTINCT empName FROM employees")],
-        'phoneNo': [row['phoneNo'] for row in conn.execute("SELECT DISTINCT phoneNo FROM employees")]
-    }
-
-    conn.close()
+            column_values = {
+                'empName': [row['empName'] for row in conn.execute("SELECT DISTINCT empName FROM employees")],
+                'phoneNo': [row['phoneNo'] for row in conn.execute("SELECT DISTINCT phoneNo FROM employees")]
+            }
 
     return render_template('employees.html',
-                           employees=employees,
-                           filters=filters,
-                           sort_by=sort_by,
-                           sort_order=sort_order,
-                           column_values=column_values)
+                         employees=employees,
+                         filters=filters,
+                         sort_by=sort_by,
+                         sort_order=sort_order,
+                         column_values=column_values)
 
 @app.route('/employee/add', methods=['GET', 'POST'])
 def add_employee():
     if request.method == 'POST':
         empId = str(uuid.uuid4())[:8]
         form = request.form
-
-        conn = get_db_connection()
-        conn.execute('''
-            INSERT INTO employees 
-            (empId, empName, phoneNo, targetAmount, achievedAmount, createdAt, updatedAt)
-            VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-        ''', (
-            empId,
-            form['empName'],
-            form['phoneNo'],
-            form['targetAmount'],
-            form['achievedAmount']
-        ))
-        conn.commit()
-        conn.close()
+        with closing(get_db_connection()) as conn:
+            with closing(conn.cursor()) as cursor:
+                cursor.execute('''
+                    INSERT INTO employees 
+                    (empId, empName, phoneNo, targetAmount, achievedAmount, createdAt, updatedAt)
+                    VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+                ''', (
+                    empId,
+                    form['empName'],
+                    form['phoneNo'],
+                    form['targetAmount'],
+                    form['achievedAmount']
+                ))
+                conn.commit()
         flash("Employee added!", "success")
         return redirect(url_for('employees'))
 
@@ -262,8 +260,10 @@ def add_employee():
 
 @app.route('/employee/edit/<string:emp_id>', methods=['GET', 'POST'])
 def edit_employee(emp_id):
-    conn = get_db_connection()
-    employee = conn.execute("SELECT * FROM employees WHERE empId = ?", (emp_id,)).fetchone()
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute("SELECT * FROM employees WHERE empId = ?", (emp_id,))
+            employee = cursor.fetchone()
 
     if not employee:
         flash("Employee not found", "danger")
@@ -271,31 +271,31 @@ def edit_employee(emp_id):
 
     if request.method == 'POST':
         form = request.form
-        conn.execute('''
-            UPDATE employees
-            SET empName = ?, phoneNo = ?, targetAmount = ?, achievedAmount = ?, updatedAt = datetime('now')
-            WHERE empId = ?
-        ''', (
-            form['empName'],
-            form['phoneNo'],
-            form['targetAmount'],
-            form['achievedAmount'],
-            emp_id
-        ))
-        conn.commit()
-        conn.close()
+        with closing(get_db_connection()) as conn:
+            with closing(conn.cursor()) as cursor:
+                cursor.execute('''
+                    UPDATE employees
+                    SET empName = ?, phoneNo = ?, targetAmount = ?, achievedAmount = ?, updatedAt = datetime('now')
+                    WHERE empId = ?
+                ''', (
+                    form['empName'],
+                    form['phoneNo'],
+                    form['targetAmount'],
+                    form['achievedAmount'],
+                    emp_id
+                ))
+                conn.commit()
         flash("Employee updated!", "info")
         return redirect(url_for('employees'))
 
-    conn.close()
     return render_template('edit_employee.html', employee=employee)
 
 @app.route('/employee/delete/<string:emp_id>')
 def delete_employee(emp_id):
-    conn = get_db_connection()
-    conn.execute("DELETE FROM employees WHERE empId = ?", (emp_id,))
-    conn.commit()
-    conn.close()
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute("DELETE FROM employees WHERE empId = ?", (emp_id,))
+            conn.commit()
     flash("Employee deleted!", "success")
     return redirect(url_for('employees'))
 
@@ -304,44 +304,82 @@ def delete_employee(emp_id):
 # -----------------------------
 @app.route('/leads', methods=['GET'])
 def leads():
-    employee_id = request.args.get('employeeId')
-    customer_id = request.args.get('customerId')
-    status = request.args.get('status')
+    filters = {
+        "employeeId": request.args.get('employeeId'),
+        "customerId": request.args.get('customerId'),
+        "status": request.args.get('status'),
+        "source": request.args.get('source')
+    }
+    
     sort_by = request.args.get('sort_by', 'employeeLeadId')
     sort_order = request.args.get('sort_order', 'asc')
 
-    leads = get_filtered_sorted_leads(employee_id, customer_id, status, sort_by, sort_order)
-    employees = get_all_employees()
-    customers = get_all_customers()
+    query = '''
+        SELECT leads.*, 
+               customers.customerName AS cust_name, 
+               employees.empName AS emp_name
+        FROM leads
+        LEFT JOIN customers ON leads.customerId = customers.customerId
+        LEFT JOIN employees ON leads.employeeId = employees.empId
+        WHERE 1=1
+    '''
+    params = []
 
-    return render_template("leads.html", leads=leads,
-                           filters={"employeeId": employee_id, "customerId": customer_id, "status": status},
-                           sort_by=sort_by, sort_order=sort_order,
-                           filter_options={"employees": employees, "customers": customers})
+    if filters["employeeId"]:
+        query += ' AND leads.employeeId = ?'
+        params.append(filters["employeeId"])
+    if filters["customerId"]:
+        query += ' AND leads.customerId = ?'
+        params.append(filters["customerId"])
+    if filters["status"]:
+        query += ' AND leads.status = ?'
+        params.append(filters["status"])
+    if filters["source"]:
+        query += ' AND leads.source LIKE ?'
+        params.append(f'%{filters["source"]}%')
+
+    query += f' ORDER BY {sort_by} {sort_order.upper()}'
+
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute(query, params)
+            leads = cursor.fetchall()
+            
+            employees = get_all_employees()
+            customers = get_all_customers()
+
+    return render_template("leads.html", 
+                         leads=leads,
+                         filters=filters,
+                         sort_by=sort_by, 
+                         sort_order=sort_order,
+                         filter_options={
+                             "employees": employees, 
+                             "customers": customers
+                         })
 
 @app.route('/leads/add', methods=['GET', 'POST'])
 def add_lead():
     if request.method == 'POST':
         form = request.form
         lead_id = str(uuid.uuid4())[:8]
-
-        conn = get_db_connection()
-        conn.execute('''
-            INSERT INTO leads 
-            (employeeLeadId, employeeId, customerId, status, source, currentAddress, desiredDestination, dateSource, createdAt, updatedAt)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-        ''', (
-            lead_id,
-            form['employeeId'],
-            form['customerId'],
-            form['status'],
-            form['source'],
-            form['currentAddress'],
-            form['desiredDestination'],
-            form['dateSource']
-        ))
-        conn.commit()
-        conn.close()
+        with closing(get_db_connection()) as conn:
+            with closing(conn.cursor()) as cursor:
+                cursor.execute('''
+                    INSERT INTO leads 
+                    (employeeLeadId, employeeId, customerId, status, source, currentAddress, desiredDestination, dateSource, createdAt, updatedAt)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+                ''', (
+                    lead_id,
+                    form['employeeId'],
+                    form['customerId'],
+                    form['status'],
+                    form['source'],
+                    form['currentAddress'],
+                    form['desiredDestination'],
+                    form['dateSource']
+                ))
+                conn.commit()
         flash("Lead added!", "success")
         return redirect(url_for('leads'))
 
@@ -349,8 +387,10 @@ def add_lead():
 
 @app.route('/leads/edit/<string:lead_id>', methods=['GET', 'POST'])
 def edit_lead(lead_id):
-    conn = get_db_connection()
-    lead = conn.execute("SELECT * FROM leads WHERE employeeLeadId = ?", (lead_id,)).fetchone()
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute("SELECT * FROM leads WHERE employeeLeadId = ?", (lead_id,))
+            lead = cursor.fetchone()
 
     if not lead:
         flash("Lead not found", "danger")
@@ -358,65 +398,102 @@ def edit_lead(lead_id):
 
     if request.method == 'POST':
         form = request.form
-        conn.execute('''
-            UPDATE leads
-            SET employeeId = ?, customerId = ?, status = ?, source = ?, 
-                currentAddress = ?, desiredDestination = ?, dateSource = ?, updatedAt = datetime('now')
-            WHERE employeeLeadId = ?
-        ''', (
-            form['employeeId'],
-            form['customerId'],
-            form['status'],
-            form['source'],
-            form['currentAddress'],
-            form['desiredDestination'],
-            form['dateSource'],
-            lead_id
-        ))
-        conn.commit()
-        conn.close()
+        with closing(get_db_connection()) as conn:
+            with closing(conn.cursor()) as cursor:
+                cursor.execute('''
+                    UPDATE leads
+                    SET employeeId = ?, customerId = ?, status = ?, source = ?, 
+                        currentAddress = ?, desiredDestination = ?, dateSource = ?, updatedAt = datetime('now')
+                    WHERE employeeLeadId = ?
+                ''', (
+                    form['employeeId'],
+                    form['customerId'],
+                    form['status'],
+                    form['source'],
+                    form['currentAddress'],
+                    form['desiredDestination'],
+                    form['dateSource'],
+                    lead_id
+                ))
+                conn.commit()
         flash("Lead updated!", "info")
         return redirect(url_for('leads'))
 
-    conn.close()
     return render_template('edit_lead.html', lead=lead, employees=get_all_employees(), customers=get_all_customers())
 
 @app.route('/leads/delete/<string:lead_id>')
 def delete_lead(lead_id):
-    conn = get_db_connection()
-    conn.execute("DELETE FROM leads WHERE employeeLeadId = ?", (lead_id,))
-    conn.commit()
-    conn.close()
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute("DELETE FROM leads WHERE employeeLeadId = ?", (lead_id,))
+            conn.commit()
     flash("Lead deleted!", "success")
     return redirect(url_for('leads'))
+
 @app.route("/leads/create", methods=["GET", "POST"])
 def create_lead():
-    conn = get_db_connection()
-    employees = conn.execute("SELECT * FROM employees").fetchall()
-    customers = conn.execute("SELECT * FROM customers").fetchall()
+    employees = get_all_employees()
+    customers = get_all_customers()
 
     if request.method == "POST":
-        employeeId = request.form["employeeId"]
-        customerId = request.form["customerId"]
-        status = request.form["status"]
-        source = request.form["source"]
-        currentAddress = request.form["currentAddress"]
-        desiredDestination = request.form["desiredDestination"]
-        dateSource = request.form["dateSource"]
-
-        conn.execute("""
-            INSERT INTO employee_leads (
-                employeeId, customerId, status, source, currentAddress, 
-                desiredDestination, dateSource, createdAt, updatedAt
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-        """, (employeeId, customerId, status, source, currentAddress, desiredDestination, dateSource))
-        conn.commit()
-        conn.close()
+        with closing(get_db_connection()) as conn:
+            with closing(conn.cursor()) as cursor:
+                cursor.execute("""
+                    INSERT INTO employee_leads (
+                        employeeId, customerId, status, source, currentAddress, 
+                        desiredDestination, dateSource, createdAt, updatedAt
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+                """, (
+                    request.form["employeeId"],
+                    request.form["customerId"],
+                    request.form["status"],
+                    request.form["source"],
+                    request.form["currentAddress"],
+                    request.form["desiredDestination"],
+                    request.form["dateSource"]
+                ))
+                conn.commit()
         flash("Lead created successfully!")
         return redirect(url_for('leads'))
 
-    conn.close()
     return render_template("create_lead.html", employees=employees, customers=customers)
+
+@app.route('/dashboard')
+def dashboard():
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            # Get leads by status (convert Row to dict)
+            cursor.execute('SELECT status, COUNT(*) as count FROM leads GROUP BY status')
+            leads_by_status = [dict(row) for row in cursor.fetchall()]
+            
+            # Get leads by source (convert Row to dict)
+            cursor.execute('SELECT source, COUNT(*) as count FROM leads GROUP BY source')
+            leads_by_source = [dict(row) for row in cursor.fetchall()]
+            
+            # Get leads by date (convert Row to dict)
+            cursor.execute('''
+                SELECT DATE(createdAt) as date, COUNT(*) as count 
+                FROM leads 
+                GROUP BY DATE(createdAt)
+                ORDER BY DATE(createdAt)
+            ''')
+            leads_by_date = [dict(row) for row in cursor.fetchall()]
+            
+            # Get total counts
+            cursor.execute('SELECT COUNT(*) FROM customers')
+            total_customers = cursor.fetchone()[0]
+            cursor.execute('SELECT COUNT(*) FROM employees')
+            total_employees = cursor.fetchone()[0]
+            cursor.execute('SELECT COUNT(*) FROM leads')
+            total_leads = cursor.fetchone()[0]
+    
+    return render_template("dashboard.html",
+                         leads_by_status=leads_by_status,
+                         leads_by_source=leads_by_source,
+                         leads_by_date=leads_by_date,
+                         total_customers=total_customers,
+                         total_employees=total_employees,
+                         total_leads=total_leads)
 
 # -----------------------------
 # Run App

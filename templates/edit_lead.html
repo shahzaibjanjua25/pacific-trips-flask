@@ -7,26 +7,33 @@
     <label for="employeeId">Employee:</label>
     <select name="employeeId" required>
         {% for emp in employees %}
-        <option value="{{ emp.empId }}" {% if emp.empId == lead.employeeId %}selected{% endif %}>{{ emp.empName }}</option>
+        <option value="{{ emp.empId }}" {% if emp.empId==lead.employeeId %}selected{% endif %}>{{ emp.empName }}
+        </option>
         {% endfor %}
     </select><br><br>
 
     <label for="customerId">Customer:</label>
     <select name="customerId" required>
         {% for cust in customers %}
-        <option value="{{ cust.customerId }}" {% if cust.customerId == lead.customerId %}selected{% endif %}>{{ cust.customerName }}</option>
+        <option value="{{ cust.customerId }}" {% if cust.customerId==lead.customerId %}selected{% endif %}>{{
+            cust.customerName }}</option>
         {% endfor %}
     </select><br><br>
 
     <label for="status">Status:</label>
     <select name="status" required>
-        {% for s in ['New', 'In Progress', 'Closed','confirmed','Confirmed'] %}
-        <option value="{{ s }}" {% if s == lead.status %}selected{% endif %}>{{ s }}</option>
+        {% for s in ['Pending', 'Contacted', 'Lost', 'Willing', 'Paid', 'Refund', 'Confirmed'] %}
+        <option value="{{ s }}" {% if s==lead.status %}selected{% endif %}>{{ s }}</option>
         {% endfor %}
     </select><br><br>
 
     <label for="source">Source:</label>
-    <input type="text" name="source" value="{{ lead.source }}" required><br><br>
+    <select name="source" required>
+        {% for s in ['Facebook', 'WhatsApp', 'Reference', 'TikTok', 'Other'] %}
+        <option value="{{ s }}" {% if s==lead.source %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+    </select><br><br>
+
 
     <label for="currentAddress">Current Address:</label>
     <input type="text" name="currentAddress" value="{{ lead.currentAddress }}" required><br><br>
