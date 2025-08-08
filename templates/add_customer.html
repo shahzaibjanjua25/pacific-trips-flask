@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Add New Customer</h2>
+
+<form action="{{ url_for('add_customer') }}" method="POST">
+    <label for="customerId">Customer ID:</label>
+    <input type="text" name="customerId" required><br>
+
+    <label for="customerName">Customer Name:</label>
+    <input type="text" name="customerName" required><br>
+
+    <label for="phone">Phone:</label>
+    <input type="text" name="phone" required><br>
+
+    <label for="source">Source:</label>
+    <input type="text" name="source" required><br>
+
+    <label for="currentLocation">Current Location:</label>
+    <input type="text" name="currentLocation" required><br>
+
+    <label for="desiredDestination">Desired Destination:</label>
+    <input type="text" name="desiredDestination" required><br>
+
+    <label for="dateOfArrival">Date of Arrival:</label>
+    <input type="date" name="dateOfArrival"><br>
+
+    <button type="submit" class="btn">Add Customer</button>
+    <a href="{{ url_for('customers') }}" class="btn">Cancel</a>
+</form>
+{% endblock %}

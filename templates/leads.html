@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Leads</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Lead ID</th>
+                <th>Employee</th>
+                <th>Customer</th>
+                <th>Status</th>
+                <th>Source</th>
+                <th>Current Address</th>
+                <th>Destination</th>
+                <th>Date Source</th>
+                <th>Created At</th>
+                <th>Updated At</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lead in leads %}
+            <tr>
+                <td>{{ lead.employeeLeadId }}</td>
+                <td>{{ lead.emp_name }} ({{ lead.employeeContactNo }})</td>
+                <td>{{ lead.cust_name }} ({{ lead.customerContactNo }})</td>
+                <td>{{ lead.status }}</td>
+                <td>{{ lead.source }}</td>
+                <td>{{ lead.currentAddress }}</td>
+                <td>{{ lead.desiredDestination }}</td>
+                <td>{{ lead.dateSource or '' }}</td>
+                <td>{{ lead.createdAt }}</td>
+                <td>{{ lead.updatedAt }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

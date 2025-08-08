@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Employees</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Target Amount</th>
+                <th>Achieved Amount</th>
+                <th>Created At</th>
+                <th>Updated At</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for employee in employees %}
+            <tr>
+                <td>{{ employee.empId }}</td>
+                <td>{{ employee.empName }}</td>
+                <td>{{ employee.phoneNo or '' }}</td>
+                <td>{{ employee.targetAmount }}</td>
+                <td>{{ employee.achievedAmount }}</td>
+                <td>{{ employee.createdAt }}</td>
+                <td>{{ employee.updatedAt }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

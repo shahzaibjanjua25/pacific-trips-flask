@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Database Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='customers.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='employees.css') }}">
+
+</head>
+
+<body>
+    <!-- 🔝 Page Header -->
+    <header class="header">
+        <h1>Database Management System</h1>
+
+        <!-- 🔗 Navigation Bar -->
+        <nav class="navbar">
+            <ul>
+                <li>
+                    <a href="{{ url_for('customers') }}"
+                        class="{% if request.endpoint == 'customers' %}active{% endif %}">
+                        Customers
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('employees') }}"
+                        class="{% if request.endpoint == 'employees' %}active{% endif %}">
+                        Employees
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('leads') }}" class="{% if request.endpoint == 'leads' %}active{% endif %}">
+                        Leads
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- 🌟 Welcome Banner -->
+        <section class="welcome-banner">
+            <p>👋 Welcome to the Database Management System – View, Edit, and Manage Everything Smoothly!</p>
+        </section>
+    </header>
+
+    <!-- 📄 Main Content Area -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- 🔚 Footer -->
+    <footer class="footer">
+        <p>&copy; 2023 Database Management System</p>
+    </footer>
+</body>
+
+</html>

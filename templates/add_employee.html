@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Add Employee</h2>
+<form method="POST" action="{{ url_for('add_employee') }}" class="form-container">
+    <label for="empId">Employee ID</label>
+    <input type="text" name="empId" required>
+
+    <label for="empName">Name</label>
+    <input type="text" name="empName" required>
+
+    <label for="phoneNo">Phone Number</label>
+    <input type="text" name="phoneNo">
+
+    <label for="targetAmount">Target Amount</label>
+    <input type="number" name="targetAmount" required>
+
+    <label for="achievedAmount">Achieved Amount</label>
+    <input type="number" name="achievedAmount" required>
+
+    <button type="submit" class="btn">Add Employee</button>
+    <a href="{{ url_for('employees') }}" class="btn danger">Cancel</a>
+</form>
+{% endblock %}

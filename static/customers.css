@@ -1,0 +1,168 @@
+/* General Reset */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Layout and Typography */
+body {
+    background: #f6f9fc;
+    color: #333;
+    padding: 40px;
+}
+
+h2 {
+    margin-bottom: 25px;
+    font-size: 28px;
+    color: #222;
+    border-left: 6px solid #4CAF50;
+    padding-left: 10px;
+}
+
+/* Button Group */
+.button-group {
+    margin-bottom: 20px;
+}
+
+.btn {
+    display: inline-block;
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 16px;
+    text-decoration: none;
+    border-radius: 6px;
+    margin-right: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background-color 0.3s, transform 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.btn:hover {
+    background-color: #45a049;
+    transform: translateY(-1px);
+}
+
+.btn.small {
+    padding: 6px 10px;
+    font-size: 13px;
+    background-color: #3498db;
+}
+
+.btn.small:hover {
+    background-color: #2980b9;
+}
+
+.btn-delete {
+    display: inline-block;
+    background-color: #e74c3c;
+    color: white;
+    padding: 6px 12px;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-left: 5px;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.btn-delete:hover {
+    background-color: #c0392b;
+    transform: translateY(-1px);
+}
+
+.btn.danger {
+    background-color: #e67e22;
+}
+
+.btn.danger:hover {
+    background-color: #d35400;
+}
+
+/* Filter Form */
+.filter-form {
+    background-color: #ffffff;
+    padding: 20px;
+    margin-bottom: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.filter-form label {
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    margin-right: 20px;
+}
+
+.filter-form select {
+    padding: 8px 10px;
+    font-size: 14px;
+    margin-top: 4px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background-color: #fff;
+    width: 180px;
+}
+
+.filter-form button {
+    align-self: flex-end;
+}
+
+/* Table Styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+thead {
+    background-color: #4CAF50;
+    color: white;
+}
+
+th, td {
+    padding: 12px 15px;
+    text-align: left;
+    font-size: 14px;
+    border-bottom: 1px solid #eee;
+}
+
+th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 13px;
+}
+
+tbody tr:hover {
+    background-color: #f9f9f9;
+}
+
+td:last-child {
+    white-space: nowrap;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .filter-form {
+        flex-direction: column;
+    }
+
+    .filter-form label, .filter-form button {
+        width: 100%;
+    }
+
+    .filter-form select {
+        width: 100%;
+    }
+}
