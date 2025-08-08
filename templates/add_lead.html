@@ -5,16 +5,22 @@
 
 <form method="POST">
     <label for="employeeId">Employee:</label>
-    <select name="employeeId" required>
+    <select name="employeeId" id="employeeId" required>
         {% for emp in employees %}
         <option value="{{ emp.empId }}">{{ emp.empName }}</option>
         {% endfor %}
     </select><br><br>
 
     <label for="customerId">Customer:</label>
-    <select name="customerId" required>
+    <select name="customerId" id="customerId" required onchange="updateCustomerDetails()">
+        <option value="">Select a customer</option>
         {% for cust in customers %}
-        <option value="{{ cust.customerId }}">{{ cust.customerName }}</option>
+        <option value="{{ cust.customerId }}" 
+                data-current="{{ cust.currentLocation }}" 
+                data-destination="{{ cust.desiredDestination }}"
+                data-phone="{{ cust.phone }}">
+            {{ cust.customerName }}
+        </option>
         {% endfor %}
     </select><br><br>
 
@@ -32,12 +38,11 @@
         {% endfor %}
     </select><br><br>
 
-
     <label for="currentAddress">Current Address:</label>
-    <input type="text" name="currentAddress" required><br><br>
+    <input type="text" name="currentAddress" id="currentAddress" required readonly><br><br>
 
     <label for="desiredDestination">Desired Destination:</label>
-    <input type="text" name="desiredDestination" required><br><br>
+    <input type="text" name="desiredDestination" id="desiredDestination" required readonly><br><br>
 
     <label for="dateSource">Date Source:</label>
     <input type="date" name="dateSource"><br><br>
@@ -45,4 +50,24 @@
     <button type="submit">Create Lead</button>
     <a href="{{ url_for('leads') }}">Cancel</a>
 </form>
+
+<script>
+function updateCustomerDetails() {
+    const customerSelect = document.getElementById('customerId');
+    const selectedOption = customerSelect.options[customerSelect.selectedIndex];
+    
+    if (selectedOption.value) {
+        document.getElementById('currentAddress').value = selectedOption.dataset.current;
+        document.getElementById('desiredDestination').value = selectedOption.dataset.destination;
+    } else {
+        document.getElementById('currentAddress').value = '';
+        document.getElementById('desiredDestination').value = '';
+    }
+}
+
+// Initialize fields if a customer is already selected
+document.addEventListener('DOMContentLoaded', function() {
+    updateCustomerDetails();
+});
+</script>
 {% endblock %}

@@ -154,6 +154,7 @@ def edit_customer(customer_id):
         form = request.form
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
+                # Update customer
                 cursor.execute('''
                     UPDATE customers
                     SET customerName = ?, phone = ?, source = ?, currentLocation = ?, 
@@ -168,8 +169,25 @@ def edit_customer(customer_id):
                     form['dateOfArrival'],
                     customer_id
                 ))
+                
+                # Update related leads with matching fields
+                cursor.execute('''
+                    UPDATE leads
+                    SET 
+                        source = ?,
+                        currentAddress = ?,
+                        desiredDestination = ?,
+                        updatedAt = datetime('now')
+                    WHERE customerId = ?
+                ''', (
+                    form['source'],
+                    form['currentLocation'],  # Assuming currentLocation in customers = currentAddress in leads
+                    form['desiredDestination'],
+                    customer_id
+                ))
+                
                 conn.commit()
-        flash("Customer updated!", "info")
+        flash("Customer and related leads updated!", "info")
         return redirect(url_for('customers'))
 
     return render_template('edit_customer.html', customer=customer)
