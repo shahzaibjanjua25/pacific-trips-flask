@@ -1,44 +1,43 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Add New Lead</h2>
+<h2>Edit Lead</h2>
 
-<form method="post">
+<form method="POST">
     <label for="employeeId">Employee:</label>
     <select name="employeeId" required>
         {% for emp in employees %}
-        <option value="{{ emp.empId }}">{{ emp.empName }} ({{ emp.phoneNo }})</option>
+        <option value="{{ emp.empId }}" {% if emp.empId == lead.employeeId %}selected{% endif %}>{{ emp.empName }}</option>
         {% endfor %}
-    </select>
+    </select><br><br>
 
     <label for="customerId">Customer:</label>
     <select name="customerId" required>
         {% for cust in customers %}
-        <option value="{{ cust.customerId }}">{{ cust.customerName }} ({{ cust.phoneNo }})</option>
+        <option value="{{ cust.customerId }}" {% if cust.customerId == lead.customerId %}selected{% endif %}>{{ cust.customerName }}</option>
         {% endfor %}
-    </select>
+    </select><br><br>
 
     <label for="status">Status:</label>
     <select name="status" required>
-        <option value="New">New</option>
-        <option value="In Progress">In Progress</option>
-        <option value="Converted">Converted</option>
-        <option value="Lost">Lost</option>
-    </select>
+        {% for s in ['New', 'In Progress', 'Closed','confirmed','Confirmed'] %}
+        <option value="{{ s }}" {% if s == lead.status %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+    </select><br><br>
 
     <label for="source">Source:</label>
-    <input type="text" name="source" placeholder="e.g. Facebook, Google Ads" required>
+    <input type="text" name="source" value="{{ lead.source }}" required><br><br>
 
     <label for="currentAddress">Current Address:</label>
-    <input type="text" name="currentAddress" required>
+    <input type="text" name="currentAddress" value="{{ lead.currentAddress }}" required><br><br>
 
-    <label for="desiredDestination">Destination:</label>
-    <input type="text" name="desiredDestination" required>
+    <label for="desiredDestination">Desired Destination:</label>
+    <input type="text" name="desiredDestination" value="{{ lead.desiredDestination }}" required><br><br>
 
-    <label for="dateSource">Source Date:</label>
-    <input type="date" name="dateSource">
+    <label for="dateSource">Date Source:</label>
+    <input type="date" name="dateSource" value="{{ lead.dateSource }}"><br><br>
 
-    <button type="submit">Create Lead</button>
-    <a href="{{ url_for('leads') }}" class="btn">🔙 Back to Leads</a>
+    <button type="submit">Update Lead</button>
+    <a href="{{ url_for('leads') }}">Cancel</a>
 </form>
 {% endblock %}
