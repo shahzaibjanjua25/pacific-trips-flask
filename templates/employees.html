@@ -1,31 +1,126 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h2>Employees</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Phone</th>
-                <th>Target Amount</th>
-                <th>Achieved Amount</th>
-                <th>Created At</th>
-                <th>Updated At</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for employee in employees %}
-            <tr>
-                <td>{{ employee.empId }}</td>
-                <td>{{ employee.empName }}</td>
-                <td>{{ employee.phoneNo or '' }}</td>
-                <td>{{ employee.targetAmount }}</td>
-                <td>{{ employee.achievedAmount }}</td>
-                <td>{{ employee.createdAt }}</td>
-                <td>{{ employee.updatedAt }}</td>
-            </tr>
+<h2>Employees</h2>
+
+<!-- Filter + Sort Form -->
+<form method="get" action="{{ url_for('employees') }}">
+    <div>
+        <label>Filter by Name:</label>
+        <select name="empName">
+            <option value="">All</option>
+            {% for name in column_values.empName %}
+            <option value="{{ name }}" {% if filters.empName==name %}selected{% endif %}>{{ name }}</option>
             {% endfor %}
-        </tbody>
-    </table>
+        </select>
+
+        <label>Phone:</label>
+        <select name="phoneNo">
+            <option value="">All</option>
+            {% for phone in column_values.phoneNo %}
+            <option value="{{ phone }}" {% if filters.phoneNo==phone %}selected{% endif %}>{{ phone }}</option>
+            {% endfor %}
+        </select>
+
+        <label style="margin-right: 5px; font-weight: bold;">
+            Start Date:
+            <span style="font-size: 0.85em; color: #666;">(mm/dd/yyyy)</span>
+        </label>
+        <input type="date" name="start_date" value="{{ filters.start_date }}"
+            style="padding: 5px; margin-right: 15px; border-radius: 4px; border: 1px solid #ccc;">
+
+        <label style="margin-right: 5px; font-weight: bold;">
+            End Date:
+            <span style="font-size: 0.85em; color: #666;">(mm/dd/yyyy)</span>
+        </label>
+        <input type="date" name="end_date" value="{{ filters.end_date }}"
+            style="padding: 5px; margin-right: 15px; border-radius: 4px; border: 1px solid #ccc;">
+
+
+        <label>Sort by:</label>
+        <select name="sort_by">
+            <option value="empName" {% if sort_by=='empName' %}selected{% endif %}>Name</option>
+            <option value="empId" {% if sort_by=='empId' %}selected{% endif %}>ID</option>
+            <option value="targetAmount" {% if sort_by=='targetAmount' %}selected{% endif %}>Target Amount</option>
+            <option value="achievedAmount" {% if sort_by=='achievedAmount' %}selected{% endif %}>Achieved Amount
+            </option>
+            <option value="createdAt" {% if sort_by=='createdAt' %}selected{% endif %}>Created At</option>
+            <option value="updatedAt" {% if sort_by=='updatedAt' %}selected{% endif %}>Updated At</option>
+        </select>
+
+        <select name="sort_order">
+            <option value="asc" {% if sort_order=='asc' %}selected{% endif %}>Ascending</option>
+            <option value="desc" {% if sort_order=='desc' %}selected{% endif %}>Descending</option>
+        </select>
+
+        <button type="submit">Apply</button>
+        <a href="{{ url_for('employees') }}"><button type="button">Reset</button></a>
+    </div>
+</form>
+
+
+<!-- Add Employee Button -->
+<div style="margin: 10px 0;">
+    <a href="{{ url_for('add_employee') }}">
+        <button type="button"
+            style="background-color: #28a745; color: white; padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;"
+            onmouseover="this.style.backgroundColor='#218838'" onmouseout="this.style.backgroundColor='#28a745'">
+            Add New Employee
+        </button>
+    </a>
+</div>
+
+<table border="1">
+    <thead>
+        <tr>
+            <th>
+                <a
+                    href="{{ url_for('employees') }}?empName={{ filters.empName }}&phoneNo={{ filters.phoneNo }}&start_date={{ filters.start_date }}&end_date={{ filters.end_date }}&sort_by=empId&sort_order={{ 'asc' if sort_order == 'desc' else 'desc' }}">ID</a>
+            </th>
+            <th>
+                <a
+                    href="{{ url_for('employees') }}?empName={{ filters.empName }}&phoneNo={{ filters.phoneNo }}&start_date={{ filters.start_date }}&end_date={{ filters.end_date }}&sort_by=empName&sort_order={{ 'asc' if sort_order == 'desc' else 'desc' }}">Name</a>
+            </th>
+            <th>Phone</th>
+            <th>
+                <a
+                    href="{{ url_for('employees') }}?empName={{ filters.empName }}&phoneNo={{ filters.phoneNo }}&start_date={{ filters.start_date }}&end_date={{ filters.end_date }}&sort_by=targetAmount&sort_order={{ 'asc' if sort_order == 'desc' else 'desc' }}">Target</a>
+            </th>
+            <th>
+                <a
+                    href="{{ url_for('employees') }}?empName={{ filters.empName }}&phoneNo={{ filters.phoneNo }}&start_date={{ filters.start_date }}&end_date={{ filters.end_date }}&sort_by=achievedAmount&sort_order={{ 'asc' if sort_order == 'desc' else 'desc' }}">Achieved</a>
+            </th>
+            <th>
+                <a
+                    href="{{ url_for('employees') }}?empName={{ filters.empName }}&phoneNo={{ filters.phoneNo }}&start_date={{ filters.start_date }}&end_date={{ filters.end_date }}&sort_by=createdAt&sort_order={{ 'asc' if sort_order == 'desc' else 'desc' }}">Created
+                    At</a>
+            </th>
+            <th>
+                <a
+                    href="{{ url_for('employees') }}?empName={{ filters.empName }}&phoneNo={{ filters.phoneNo }}&start_date={{ filters.start_date }}&end_date={{ filters.end_date }}&sort_by=updatedAt&sort_order={{ 'asc' if sort_order == 'desc' else 'desc' }}">Updated
+                    At</a>
+            </th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for employee in employees %}
+        <tr>
+            <td>{{ employee.empId }}</td>
+            <td>{{ employee.empName }}</td>
+            <td>{{ employee.phoneNo or '' }}</td>
+            <td>{{ employee.targetAmount }}</td>
+            <td>{{ employee.achievedAmount }}</td>
+            <td>{{ employee.createdAt }}</td>
+            <td>{{ employee.updatedAt }}</td>
+            <td>
+                <a href="{{ url_for('edit_employee', emp_id=employee.empId) }}">Edit</a> |
+                <a href="{{ url_for('delete_employee', emp_id=employee.empId) }}"
+                    onclick="return confirm('Delete this employee?')">Delete</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
 {% endblock %}

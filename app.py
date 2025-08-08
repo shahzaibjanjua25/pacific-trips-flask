@@ -191,18 +191,30 @@ def delete_customer(customer_id):
 def employees():
     filters = {
         'empName': request.args.get('empName', ''),
-        'phoneNo': request.args.get('phoneNo', '')
+        'phoneNo': request.args.get('phoneNo', ''),
+        'start_date': request.args.get('start_date', ''),
+        'end_date': request.args.get('end_date', '')
     }
+
     sort_by = request.args.get('sort_by', 'empId')
     sort_order = request.args.get('sort_order', 'asc')
 
     query = "SELECT * FROM employees WHERE 1=1"
     params = []
 
-    for col, val in filters.items():
+    for col in ['empName', 'phoneNo']:
+        val = filters[col]
         if val:
             query += f" AND {col} = ?"
             params.append(val)
+
+    if filters['start_date']:
+        query += " AND DATE(createdAt) >= ?"
+        params.append(filters['start_date'])
+
+    if filters['end_date']:
+        query += " AND DATE(createdAt) <= ?"
+        params.append(filters['end_date'])
 
     query += f" ORDER BY {sort_by} {sort_order.upper()}"
 
