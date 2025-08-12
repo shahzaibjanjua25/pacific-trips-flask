@@ -3,17 +3,80 @@
 {% block content %}
 <h2>Leads</h2>
 
-<!-- Add New Lead Button -->
-<a href="{{ url_for('add_lead') }}" class="add-button">➕ Add New Lead</a>
+<!-- 🔘 Create Button -->
+<div class="button-group">
+    <a href="{{ url_for('add_lead') }}" class="btn">➕ Add Lead</a>
+</div>
 
-<table border="1">
+<!-- 🔍 Filters + Sorting -->
+<form method="GET" action="{{ url_for('leads') }}" class="filter-form">
+    <label>Employee:
+        <select name="employeeId">
+            <option value="">All</option>
+            {% for emp in filter_options.employees %}
+            <option value="{{ emp.empId }}" {% if filters.employeeId == emp.empId %}selected{% endif %}>
+                {{ emp.empName }}
+            </option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>Customer:
+        <select name="customerId">
+            <option value="">All</option>
+            {% for cust in filter_options.customers %}
+            <option value="{{ cust.customerId }}" {% if filters.customerId == cust.customerId %}selected{% endif %}>
+                {{ cust.customerName }}
+            </option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>Status:
+        <select name="status">
+            <option value="">All</option>
+            {% for val in leads | map(attribute='status') | unique %}
+            <option value="{{ val }}" {% if filters.status == val %}selected{% endif %}>{{ val }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>Source:
+        <select name="source">
+            <option value="">All</option>
+            {% for val in leads | map(attribute='source') | unique %}
+            <option value="{{ val }}" {% if filters.source == val %}selected{% endif %}>{{ val }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>Sort By:
+        <select name="sort_by">
+            {% for col in ['employeeLeadId', 'employeeId', 'empName', 'customerId', 'customerName', 'status', 'source', 'currentAddress', 'desiredDestination', 'dateSource', 'createdAt', 'updatedAt'] %}
+            <option value="{{ col }}" {% if sort_by == col %}selected{% endif %}>{{ col }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>Order:
+        <select name="sort_order">
+            <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+            <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
+        </select>
+    </label>
+
+    <button type="submit" class="btn">Apply Filters</button>
+    <a href="{{ url_for('leads') }}" class="btn danger">Reset</a>
+</form>
+
+<!-- 📋 Leads Table -->
+<table>
     <thead>
         <tr>
-            {% set new_order = 'desc' if sort_order == 'asc' else 'asc' %}
-            <th><a href="{{ url_for('leads', sort_by='employeeLeadId', sort_order=new_order, **filters) }}">Lead ID</a></th>
-            <th><a href="{{ url_for('leads', sort_by='employeeId', sort_order=new_order, **filters) }}">Employee</a></th>
-            <th><a href="{{ url_for('leads', sort_by='customerId', sort_order=new_order, **filters) }}">Customer</a></th>
-            <th><a href="{{ url_for('leads', sort_by='status', sort_order=new_order, **filters) }}">Status</a></th>
+            <th>Lead ID</th>
+            <th>Employee</th>
+            <th>Customer</th>
+            <th>Status</th>
             <th>Source</th>
             <th>Current Address</th>
             <th>Destination</th>
@@ -37,9 +100,9 @@
             <td>{{ lead.createdAt }}</td>
             <td>{{ lead.updatedAt }}</td>
             <td>
-                <a href="{{ url_for('edit_lead', lead_id=lead.employeeLeadId) }}">Edit</a> |
-                <a href="{{ url_for('delete_lead', lead_id=lead.employeeLeadId) }}"
-                   onclick="return confirm('Are you sure you want to delete this lead?')">Delete</a>
+                <a href="{{ url_for('edit_lead', lead_id=lead.employeeLeadId) }}" class="btn small">✏️</a>
+                <a href="{{ url_for('delete_lead', lead_id=lead.employeeLeadId) }}" class="btn-delete"
+                   onclick="return confirm('Are you sure you want to delete this lead?');">Delete</a>
             </td>
         </tr>
         {% endfor %}
