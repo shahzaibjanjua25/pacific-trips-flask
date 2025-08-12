@@ -1142,6 +1142,7 @@ def logs():
         'table_name': request.args.get('table_name', ''),
         'action': request.args.get('action', ''),
         'start_date': request.args.get('start_date', ''),
+        'source': request.args.get('source', ''),
         'end_date': request.args.get('end_date', '')
     }
     
