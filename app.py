@@ -5,6 +5,7 @@ import uuid
 from contextlib import closing
 import json
 from datetime import datetime
+from collections import defaultdict
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key'
@@ -30,7 +31,124 @@ def get_all_customers():
         with closing(conn.cursor()) as cursor:
             cursor.execute("SELECT customerId, customerName FROM customers")
             return cursor.fetchall()
+def generate_status_chart(chart_data):
+    """
+    Convert the chart data from Flask to a format suitable for Python charting libraries.
+    Returns data structured for either Matplotlib or Plotly.
+    """
+    # Status colors mapping
+    status_colors = {
+        'New': '#3498db',
+        'Contacted': '#f1c40f',
+        'Qualified': '#2ecc71',
+        'Proposal Sent': '#e67e22',
+        'Negotiation': '#9b59b6',
+        'Confirmed': '#27ae60',
+        'Lost': '#e74c3c',
+        'On Hold': '#95a5a6'
+    }
 
+    # Process the data similar to the JavaScript version
+    processed_data = {
+        'labels': [],  # Dates
+        'datasets': []  # Employee status data
+    }
+
+    # Temporary storage for employee-status combinations
+    temp_data = {}
+
+    for date, employees_data in chart_data.items():
+        processed_data['labels'].append(date)
+        
+        for employee_id, employee_info in employees_data.items():
+            for status, count in employee_info['statuses'].items():
+                key = f"{employee_id}-{status}"
+                if key not in temp_data:
+                    temp_data[key] = {
+                        'label': f"{employee_info['name']} - {status}",
+                        'data': [0] * len(processed_data['labels']),
+                        'backgroundColor': status_colors.get(status, '#95a5a6'),
+                        'borderColor': status_colors.get(status, '#95a5a6'),
+                        'employee_name': employee_info['name'],
+                        'status': status
+                    }
+                # Update the count for this date
+                temp_data[key]['data'][-1] = count
+
+    # Add datasets to the main structure
+    for dataset in temp_data.values():
+        processed_data['datasets'].append(dataset)
+
+    return processed_data
+
+
+# Example usage with Plotly
+def create_plotly_chart(chart_data):
+    processed_data = generate_status_chart(chart_data)
+    
+    import plotly.graph_objects as go
+    
+    fig = go.Figure()
+    
+    for dataset in processed_data['datasets']:
+        fig.add_trace(go.Bar(
+            x=processed_data['labels'],
+            y=dataset['data'],
+            name=dataset['label'],
+            marker_color=dataset['backgroundColor'],
+            hovertemplate=
+                '<b>%{x}</b><br>' +
+                f'Employee: {dataset["employee_name"]}<br>' +
+                f'Status: {dataset["status"]}<br>' +
+                'Count: %{y}<extra></extra>'
+        ))
+    
+    fig.update_layout(
+        barmode='stack',
+        title='Lead Status Changes Over Time',
+        xaxis_title='Date',
+        yaxis_title='Count',
+        hovermode='x unified'
+    )
+    
+    return fig
+
+
+# Example usage with Matplotlib
+def create_matplotlib_chart(chart_data):
+    processed_data = generate_status_chart(chart_data)
+    
+    import matplotlib.pyplot as plt
+    import numpy as np
+    
+    fig, ax = plt.subplots(figsize=(12, 6))
+    
+    dates = processed_data['labels']
+    x = np.arange(len(dates))
+    
+    # Track cumulative heights for stacking
+    cumulative = np.zeros(len(dates))
+    
+    for dataset in processed_data['datasets']:
+        ax.bar(
+            x, 
+            dataset['data'], 
+            bottom=cumulative,
+            label=dataset['label'],
+            color=dataset['backgroundColor'],
+            edgecolor=dataset['borderColor']
+        )
+        cumulative += np.array(dataset['data'])
+    
+    ax.set_xticks(x)
+    ax.set_xticklabels(dates, rotation=45)
+    ax.set_title('Lead Status Changes Over Time')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Count')
+    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    
+    plt.tight_layout()
+    return fig
 def get_filtered_sorted_leads(employee_id, customer_id, status, start_date, end_date, sort_by, sort_order):
     query = '''
         SELECT leads.*, 
@@ -155,6 +273,7 @@ def customers():
                          column_values=column_values)
 @app.route('/status_changes')
 def status_changes():
+    """Display lead status changes with pie chart visualization."""
     # Get filters from request
     filters = {
         'employee_id': request.args.get('employee_id', ''),
@@ -166,8 +285,7 @@ def status_changes():
     # Build query for status changes
     query = """
         SELECT 
-            strftime('%Y-%m-%d', created_at) AS date,
-            json_extract(new_values, '$.status') AS new_status,
+            json_extract(new_values, '$.status') AS status,
             COALESCE(lead_employee, changed_by) AS employee_id,
             COUNT(*) AS status_count
         FROM logs
@@ -193,7 +311,7 @@ def status_changes():
         query += " AND DATE(created_at) <= ?"
         params.append(filters['end_date'])
     
-    query += " GROUP BY date, new_status, employee_id ORDER BY date"
+    query += " GROUP BY status, employee_id"
     
     # Execute query
     with closing(get_db_connection()) as conn:
@@ -207,33 +325,81 @@ def status_changes():
         
         # Get unique statuses for dropdown
         cursor.execute("SELECT DISTINCT status FROM leads")
-        statuses = [row['status'] for row in cursor.fetchall()]
+        statuses = [row['status'] for row in cursor.fetchall() if row['status']]
     
-    # Prepare data for chart with proper employee names
-    chart_data = {}
+    # Prepare data structures
+    status_counts = defaultdict(int)
+    employee_status_counts = defaultdict(lambda: {'name': '', 'statuses': defaultdict(int)})
+    
     for row in status_data:
-        date = row['date']
-        status = row['new_status']
+        status = row['status']
         employee_id = row['employee_id']
-        employee_name = employee_names.get(employee_id, 'Unknown')
         count = row['status_count']
         
-        if date not in chart_data:
-            chart_data[date] = {}
+        # Update status counts
+        status_counts[status] += count
         
-        if employee_id not in chart_data[date]:
-            chart_data[date][employee_id] = {
-                'name': employee_name,
-                'statuses': {}
-            }
-        
-        chart_data[date][employee_id]['statuses'][status] = count
+        # Update employee-specific counts
+        if employee_id in employee_names:
+            employee_status_counts[employee_id]['name'] = employee_names[employee_id]
+            employee_status_counts[employee_id]['statuses'][status] += count
     
-    return render_template('status_changes.html',
-                         chart_data=chart_data,
+    # Convert defaultdicts to regular dicts for template
+    status_counts = dict(status_counts)
+    employee_status_counts = dict(employee_status_counts)
+    
+    # Generate visualization (using Plotly)
+    def generate_pie_chart(status_data):
+        """Generate Plotly pie chart from status data."""
+        if not status_data:
+            return "<div class='no-data'>No status changes found for the selected filters</div>"
+            
+        import plotly.graph_objects as go
+        
+        # Status colors mapping
+        status_colors = {
+            'New': '#3498db',
+            'Contacted': '#f1c40f',
+            'Qualified': '#2ecc71',
+            'Proposal Sent': '#e67e22',
+            'Negotiation': '#9b59b6',
+            'Confirmed': '#27ae60',
+            'Lost': '#e74c3c',
+            'On Hold': '#95a5a6'
+        }
+        
+        labels = list(status_data.keys())
+        values = list(status_data.values())
+        colors = [status_colors.get(status, '#95a5a6') for status in labels]
+        
+        fig = go.Figure(data=[go.Pie(
+            labels=labels,
+            values=values,
+            marker_colors=colors,
+            hole=0.3,
+            textinfo='percent+label',
+            hoverinfo='label+value+percent',
+            textposition='inside'
+        )])
+        
+        fig.update_layout(
+            title='Status Distribution',
+            height=500,
+            showlegend=False
+        )
+        
+        return fig.to_html(full_html=False)
+    
+    # Generate the chart HTML
+    chart_html = generate_pie_chart(status_counts)
+    
+    return render_template('status_changes_pie.html',
+                         chart_html=chart_html,
                          employees=list(employee_names.items()),
                          statuses=statuses,
-                         filters=filters)
+                         filters=filters,
+                         status_counts=status_counts,
+                         employee_status_counts=employee_status_counts)
 
 @app.route('/add_customer', methods=['GET', 'POST'])
 def add_customer():

@@ -1,30 +1,98 @@
 {% extends "base.html" %}
+
 {% block content %}
 <h2 class="dashboard-title">📊 Dashboard</h2>
 
 <div class="dashboard-charts">
-    <div class="chart-container">
-        <canvas id="pieChart"></canvas>
+    <div class="chart-box">
+        <h3>Pie Chart – Leads by Status</h3>
+        <div class="chart-wrapper">
+            <canvas id="pieChart"></canvas>
+        </div>
     </div>
-    <div class="chart-container">
-        <canvas id="barChart"></canvas>
+
+    <div class="chart-box">
+        <h3>Bar Chart – Leads by Source</h3>
+        <div class="chart-wrapper">
+            <canvas id="barChart"></canvas>
+        </div>
     </div>
-    <div class="chart-container">
-        <canvas id="lineChart"></canvas>
+
+    <div class="chart-box">
+        <h3>Line Chart – Leads Over Time</h3>
+        <div class="chart-wrapper">
+            <canvas id="lineChart"></canvas>
+        </div>
     </div>
-    <div class="chart-container">
-        <canvas id="doughnutChart"></canvas>
+
+    <div class="chart-box">
+        <h3>Doughnut Chart – Entity Breakdown</h3>
+        <div class="chart-wrapper">
+            <canvas id="doughnutChart"></canvas>
+        </div>
     </div>
-    <div class="chart-container">
-        <canvas id="radarChart"></canvas>
+
+    <div class="chart-box">
+        <h3>Radar Chart – Status Breakdown</h3>
+        <div class="chart-wrapper">
+            <canvas id="radarChart"></canvas>
+        </div>
     </div>
-    <div class="chart-container">
-        <canvas id="polarChart"></canvas>
+
+    <div class="chart-box">
+        <h3>Polar Area Chart – Leads by Source</h3>
+        <div class="chart-wrapper">
+            <canvas id="polarChart"></canvas>
+        </div>
     </div>
 </div>
 
+<style>
+.dashboard-title {
+    text-align: center;
+    margin: 30px 0;
+    font-size: 32px;
+    font-weight: 700;
+}
+
+.dashboard-charts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 30px;
+    padding: 20px;
+}
+
+.chart-box {
+    flex: 1 1 500px;
+    max-width: 600px;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.chart-box h3 {
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 20px;
+}
+
+.chart-wrapper {
+    position: relative;
+    width: 100%;
+    height: 400px;
+}
+
+@media (max-width: 768px) {
+    .chart-wrapper {
+        height: 300px;
+    }
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Data from Flask
     const leadsByStatus = {{ leads_by_status|tojson }};
     const leadsBySource = {{ leads_by_source|tojson }};
     const leadsByDate = {{ leads_by_date|tojson }};
@@ -32,70 +100,61 @@
     const totalEmployees = {{ total_employees }};
     const totalLeads = {{ total_leads }};
 
-    // Chart configuration with larger fonts
     const chartOptions = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
             legend: {
                 labels: {
-                    font: {
-                        size: 18
-                    }
+                    font: { size: 14 }
                 }
             },
             title: {
-                display: true,
-                font: {
-                    size: 22
-                }
+                display: false
             }
         },
         scales: {
             x: {
                 ticks: {
-                    font: {
-                        size: 16
-                    }
+                    font: { size: 12 }
                 }
             },
             y: {
                 ticks: {
-                    font: {
-                        size: 16
-                    }
+                    font: { size: 12 }
                 }
             }
         }
     };
 
-    // Pie Chart - Leads by Status
     new Chart(document.getElementById('pieChart'), {
         type: 'pie',
         data: {
             labels: leadsByStatus.map(r => r.status),
             datasets: [{
                 label: 'Leads by Status',
-                data: leadsByStatus.map(r => r.count)
+                data: leadsByStatus.map(r => r.count),
+                backgroundColor: [
+                    '#3498db', '#f1c40f', '#2ecc71', '#e67e22', '#9b59b6', '#27ae60', '#e74c3c', '#95a5a6'
+                ]
             }]
         },
         options: chartOptions
     });
 
-    // Bar Chart - Leads by Source
     new Chart(document.getElementById('barChart'), {
         type: 'bar',
         data: {
             labels: leadsBySource.map(r => r.source),
             datasets: [{
                 label: 'Leads by Source',
-                data: leadsBySource.map(r => r.count)
+                data: leadsBySource.map(r => r.count),
+                backgroundColor: '#4e73df'
             }]
         },
         options: chartOptions
     });
 
-    // Line Chart - Leads Over Time
     new Chart(document.getElementById('lineChart'), {
         type: 'line',
         data: {
@@ -103,6 +162,7 @@
             datasets: [{
                 label: 'Leads Over Time',
                 data: leadsByDate.map(r => r.count),
+                borderColor: '#2ecc71',
                 fill: false,
                 tension: 0.3
             }]
@@ -110,40 +170,44 @@
         options: chartOptions
     });
 
-    // Doughnut Chart - Overall Entity Breakdown
     new Chart(document.getElementById('doughnutChart'), {
         type: 'doughnut',
         data: {
             labels: ['Customers', 'Employees', 'Leads'],
             datasets: [{
                 label: 'Entity Count',
-                data: [totalCustomers, totalEmployees, totalLeads]
+                data: [totalCustomers, totalEmployees, totalLeads],
+                backgroundColor: ['#1abc9c', '#e74c3c', '#9b59b6']
             }]
         },
         options: chartOptions
     });
 
-    // Radar Chart - Status Breakdown
     new Chart(document.getElementById('radarChart'), {
         type: 'radar',
         data: {
             labels: leadsByStatus.map(r => r.status),
             datasets: [{
                 label: 'Leads by Status',
-                data: leadsByStatus.map(r => r.count)
+                data: leadsByStatus.map(r => r.count),
+                backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                borderColor: '#3498db',
+                pointBackgroundColor: '#3498db'
             }]
         },
         options: chartOptions
     });
 
-    // Polar Area Chart - Leads by Source
     new Chart(document.getElementById('polarChart'), {
         type: 'polarArea',
         data: {
             labels: leadsBySource.map(r => r.source),
             datasets: [{
                 label: 'Leads by Source',
-                data: leadsBySource.map(r => r.count)
+                data: leadsBySource.map(r => r.count),
+                backgroundColor: [
+                    '#f39c12', '#e67e22', '#1abc9c', '#9b59b6', '#e74c3c', '#2ecc71'
+                ]
             }]
         },
         options: chartOptions
