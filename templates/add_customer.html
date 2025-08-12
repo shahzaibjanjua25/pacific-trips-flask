@@ -4,39 +4,57 @@
 <h2>Add New Customer</h2>
 
 <form action="{{ url_for('add_customer') }}" method="POST">
+    <div>
+        <label for="customerName">Customer Name:</label>
+        <input type="text" name="customerName" required>
+    </div>
 
-    <label for="customerName">Customer Name:</label>
-    <input type="text" name="customerName" required><br>
+    <div>
+        <label for="phone">Phone:</label>
+        <input type="text" name="phone" required>
+    </div>
 
-    <label for="phone">Phone:</label>
-    <input type="text" name="phone" required><br>
+    <div>
+        <label for="status">Status:</label>
+        <select name="status" required>
+            {% for s in ['Pending', 'Contacted', 'Lost', 'Willing', 'Paid', 'Refund', 'Confirmed'] %}
+            <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+        </select>
+    </div>
 
-    <!-- Status dropdown -->
-    <label for="status">Status:</label>
-    <select name="status" required>
-        {% for s in ['Pending', 'Contacted', 'Lost', 'Willing', 'Paid', 'Refund', 'Confirmed'] %}
-        <option value="{{ s }}">{{ s }}</option>
-        {% endfor %}
-    </select><br>
+    <div>
+        <label for="source">Source:</label>
+        <select name="source" required>
+            {% for s in ['Facebook', 'WhatsApp', 'Reference', 'TikTok', 'Other'] %}
+            <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+        </select>
+    </div>
 
-    <!-- Source dropdown -->
-    <label for="source">Source:</label>
-    <select name="source" required>
-        {% for s in ['Facebook', 'WhatsApp', 'Reference', 'TikTok', 'Other'] %}
-        <option value="{{ s }}">{{ s }}</option>
-        {% endfor %}
-    </select><br>
+    <div>
+        <label for="currentLocation">Current Location:</label>
+        <input type="text" name="currentLocation" required>
+    </div>
 
-    <label for="currentLocation">Current Location:</label>
-    <input type="text" name="currentLocation" required><br>
+    <div>
+        <label for="desiredDestination">Desired Destination:</label>
+        <input type="text" name="desiredDestination" required>
+    </div>
 
-    <label for="desiredDestination">Desired Destination:</label>
-    <input type="text" name="desiredDestination" required><br>
+    <div>
+        <label for="dateOfArrival">Date of Arrival:</label>
+        <input type="date" name="dateOfArrival">
+    </div>
 
-    <label for="dateOfArrival">Date of Arrival:</label>
-    <input type="date" name="dateOfArrival"><br>
+    <!-- Empty div to align the button row properly -->
+    <div></div>
 
-    <button type="submit" class="btn">Add Customer</button>
-    <a href="{{ url_for('customers') }}" class="btn">Cancel</a>
+    <!-- Buttons aligned to the right, spanning full width -->
+    <div class="form-buttons">
+        <button type="submit" class="btn">Add Customer</button>
+        <a href="{{ url_for('customers') }}" class="btn">Cancel</a>
+    </div>
 </form>
+
 {% endblock %}

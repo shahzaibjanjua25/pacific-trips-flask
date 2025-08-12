@@ -4,48 +4,59 @@
 <h2>Add New Lead</h2>
 
 <form method="POST" id="leadForm">
-    <label for="employeeId">Employee:</label>
-    <select name="employeeId" id="employeeId" required>
-        {% for emp in employees %}
-        <option value="{{ emp.empId }}">{{ emp.empName }}</option>
-        {% endfor %}
-    </select><br><br>
+    <div>
+        <label for="employeeId">Employee:</label>
+        <select name="employeeId" id="employeeId" required>
+            {% for emp in employees %}
+            <option value="{{ emp.empId }}">{{ emp.empName }}</option>
+            {% endfor %}
+        </select>
+    </div>
 
-    <label for="customerId">Customer:</label>
-    <select name="customerId" id="customerId" required onchange="updateCustomerDetails()">
-        <option value="">Select a customer</option>
-        {% for cust in customers %}
-        <option value="{{ cust.customerId }}" 
-                data-current="{{ cust.currentLocation }}" 
-                data-destination="{{ cust.desiredDestination }}"
-                data-phone="{{ cust.phone }}"
-                data-source="{{ cust.source }}">
-            {{ cust.customerName }}
-        </option>
-        {% endfor %}
-    </select><br><br>
+    <div>
+        <label for="customerId">Customer:</label>
+        <select name="customerId" id="customerId" required onchange="updateCustomerDetails()">
+            <option value="">Select a customer</option>
+            {% for cust in customers %}
+            <option value="{{ cust.customerId }}" 
+                    data-current="{{ cust.currentLocation }}" 
+                    data-destination="{{ cust.desiredDestination }}"
+                    data-phone="{{ cust.phone }}"
+                    data-source="{{ cust.source }}">
+                {{ cust.customerName }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
 
-    <label for="status">Status:</label>
-    <select name="status" id="status" required onchange="checkStatusChange()">
-        {% for s in ['Pending', 'Contacted', 'Lost', 'Willing', 'Paid', 'Refund', 'Confirmed'] %}
-        <option value="{{ s }}">{{ s }}</option>
-        {% endfor %}
-    </select><br><br>
+    <div>
+        <label for="status">Status:</label>
+        <select name="status" id="status" required onchange="checkStatusChange()">
+            {% for s in ['Pending', 'Contacted', 'Lost', 'Willing', 'Paid', 'Refund', 'Confirmed'] %}
+            <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Add an empty div to keep layout alignment -->
+    <div></div>
 
     <!-- Hidden fields auto-filled from customer -->
     <input type="hidden" name="source" id="source">
     <input type="hidden" name="currentAddress" id="currentAddress">
     <input type="hidden" name="desiredDestination" id="desiredDestination">
-
-    <!-- Hidden field for amount -->
     <input type="hidden" id="amountClosed" name="amountClosed" value="0">
 
-    <button type="submit">Create Lead</button>
-    <a href="{{ url_for('leads') }}">Cancel</a>
+    <!-- Button row -->
+    <div></div>
+    <div class="form-buttons">
+        <button type="submit" class="btn">Create Lead</button>
+        <a href="{{ url_for('leads') }}" class="btn">Cancel</a>
+    </div>
 </form>
 
 <!-- Amount Input Modal -->
-<div id="amountModal" class="modal" style="display:none;">
+<div id="amountModal" class="modal">
     <div class="modal-content">
         <span class="close" onclick="closeModal()">&times;</span>
         <h3 id="modalTitle">Enter Amount</h3>
@@ -58,7 +69,7 @@
 function updateCustomerDetails() {
     const customerSelect = document.getElementById('customerId');
     const selectedOption = customerSelect.options[customerSelect.selectedIndex];
-    
+
     if (selectedOption.value) {
         document.getElementById('currentAddress').value = selectedOption.dataset.current;
         document.getElementById('desiredDestination').value = selectedOption.dataset.destination;
@@ -74,11 +85,11 @@ let previousStatus = '';
 
 function checkStatusChange() {
     const newStatus = document.getElementById('status').value;
-    
+
     if (newStatus === 'Confirmed') {
         showAmountModal('Enter the closed amount for this lead:');
     }
-    
+
     previousStatus = newStatus;
 }
 
@@ -109,7 +120,7 @@ window.onclick = function(event) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     updateCustomerDetails();
 });
 </script>
@@ -133,6 +144,30 @@ document.addEventListener('DOMContentLoaded', function() {
     border: 1px solid #888;
     width: 80%;
     max-width: 500px;
+    border-radius: 8px;
+}
+
+.modal-content input[type="number"] {
+    width: 100%;
+    padding: 10px 12px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.modal-content button {
+    padding: 10px 18px;
+    background-color: #007BFF;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.modal-content button:hover {
+    background-color: #0056b3;
 }
 
 .close {

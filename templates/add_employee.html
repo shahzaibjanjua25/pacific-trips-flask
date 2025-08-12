@@ -2,24 +2,34 @@
 
 {% block content %}
 <h2>Add Employee</h2>
-<form method="POST" action="{{ url_for('add_employee') }}" class="form-container">
-    <!-- Optional: show the generated empId -->
-    <!-- <label for="empId">Employee ID (Auto-generated)</label>
-    <input type="text" value="{{ empId }}" readonly> -->
 
-    <label for="empName">Name</label>
-    <input type="text" name="empName" required>
+<form method="POST" action="{{ url_for('add_employee') }}">
+    <div>
+        <label for="empName">Name</label>
+        <input type="text" name="empName" id="empName" required>
+    </div>
 
-    <label for="phoneNo">Phone Number</label>
-    <input type="text" name="phoneNo">
+    <div>
+        <label for="phoneNo">Phone Number</label>
+        <input type="text" name="phoneNo" id="phoneNo">
+    </div>
 
-    <label for="targetAmount">Target Amount</label>
-    <input type="number" name="targetAmount" required>
+    <div>
+        <label for="targetAmount">Target Amount</label>
+        <input type="number" name="targetAmount" id="targetAmount" required>
+    </div>
 
-    <label for="achievedAmount">Achieved Amount</label>
-    <input type="number" name="achievedAmount" required>
+    <div>
+        <label for="achievedAmount">Achieved Amount</label>
+        <input type="number" name="achievedAmount" id="achievedAmount" required>
+    </div>
 
-    <button type="submit" class="btn">Add Employee</button>
-    <a href="{{ url_for('employees') }}" class="btn danger">Cancel</a>
+    <!-- Placeholder div for grid alignment -->
+    <div></div>
+
+    <div class="form-buttons">
+        <button type="submit" class="btn">Add Employee</button>
+        <a href="{{ url_for('employees') }}" class="btn">Cancel</a>
+    </div>
 </form>
 {% endblock %}

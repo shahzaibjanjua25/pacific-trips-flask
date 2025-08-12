@@ -88,4 +88,29 @@
         {% endfor %}
     </tbody>
 </table>
+<style>/* Make the filter form and the table share the same max-width and alignment */
+.filter-form {
+  max-width: 1400px;   /* or whatever width your table container uses */
+  margin: 20px auto;   /* center horizontally and add vertical spacing */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: center;
+}
+
+/* Make the labels inside filter-form more compact */
+.filter-form label {
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+  min-width: 150px; /* or adjust to fit your labels nicely */
+}
+
+/* Make the buttons in filter form consistent and spaced */
+.filter-form .btn,
+.filter-form .btn.danger {
+  min-width: 120px;
+  margin-top: 24px;
+}
+</style>
 {% endblock %}
