@@ -116,18 +116,19 @@ def customers():
 @app.route('/add_customer', methods=['GET', 'POST'])
 def add_customer():
     if request.method == 'POST':
-        new_id = str(uuid.uuid4())[:8]
+        new_id = str(uuid.uuid4())[:8]  # Auto-generate ID
         form = request.form
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
                 cursor.execute('''
                     INSERT INTO customers 
-                    (customerId, customerName, phone, source, currentLocation, desiredDestination, dateOfArrival)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    (customerId, customerName, phone, status, source, currentLocation, desiredDestination, dateOfArrival)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     new_id,
                     form['customerName'],
                     form['phone'],
+                    form['status'],
                     form['source'],
                     form['currentLocation'],
                     form['desiredDestination'],
@@ -138,6 +139,7 @@ def add_customer():
         return redirect(url_for('customers'))
 
     return render_template('add_customer.html')
+
 
 @app.route('/customers/edit/<string:customer_id>', methods=['GET', 'POST'])
 def edit_customer(customer_id):
@@ -157,29 +159,31 @@ def edit_customer(customer_id):
                 # Update customer
                 cursor.execute('''
                     UPDATE customers
-                    SET customerName = ?, phone = ?, source = ?, currentLocation = ?, 
+                    SET customerName = ?, phone = ?, status = ?, source = ?, currentLocation = ?, 
                         desiredDestination = ?, dateOfArrival = ?
                     WHERE customerId = ?
                 ''', (
                     form['customerName'],
                     form['phone'],
+                    form['status'],
                     form['source'],
                     form['currentLocation'],
                     form['desiredDestination'],
                     form['dateOfArrival'],
                     customer_id
                 ))
-                
-                # Update related leads with matching fields
+
+                # Update related leads to keep status and other info in sync
                 cursor.execute('''
                     UPDATE leads
-                    SET 
+                    SET status = ?, 
                         source = ?,
                         currentAddress = ?,
                         desiredDestination = ?,
                         updatedAt = datetime('now')
                     WHERE customerId = ?
                 ''', (
+                    form['status'],
                     form['source'],
                     form['currentLocation'],  # Assuming currentLocation in customers = currentAddress in leads
                     form['desiredDestination'],
@@ -187,10 +191,12 @@ def edit_customer(customer_id):
                 ))
                 
                 conn.commit()
+
         flash("Customer and related leads updated!", "info")
         return redirect(url_for('customers'))
 
     return render_template('edit_customer.html', customer=customer)
+
 
 @app.route('/customers/delete/<string:customer_id>')
 def delete_customer(customer_id):
@@ -463,30 +469,25 @@ def edit_lead(lead_id):
         
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
-                # Handle amount changes
+                # Handle employee achievedAmount update
                 if form['status'] == 'Confirmed':
                     if lead['status'] != 'Confirmed':
-                        # Status changed to Confirmed - add amount
                         new_achieved = employee['achievedAmount'] + amount_closed
                     else:
-                        # Status remains Confirmed - adjust amount
                         new_achieved = employee['achievedAmount'] - previous_amount + amount_closed
                 else:
                     if lead['status'] == 'Confirmed':
-                        # Status changed from Confirmed - subtract amount
                         new_achieved = employee['achievedAmount'] - previous_amount
                     else:
-                        # Status remains not Confirmed - no change
                         new_achieved = employee['achievedAmount']
                 
-                # Update employee's achieved amount
                 cursor.execute('''
                     UPDATE employees 
                     SET achievedAmount = ?
                     WHERE empId = ?
                 ''', (new_achieved, lead['employeeId']))
                 
-                # Update lead
+                # Update the lead
                 cursor.execute('''
                     UPDATE leads
                     SET employeeId = ?, customerId = ?, status = ?, source = ?, 
@@ -505,15 +506,26 @@ def edit_lead(lead_id):
                     lead_id
                 ))
 
+                # 🔹 NEW: also update the linked customer's status
+                cursor.execute('''
+                    UPDATE customers
+                    SET status = ?
+                    WHERE customerId = ?
+                ''', (
+                    form['status'],
+                    form['customerId']
+                ))
+
                 conn.commit()
 
-        flash("Lead and related employee updated!", "info")
+        flash("Lead, related customer, and employee updated!", "info")
         return redirect(url_for('leads'))
 
     return render_template('edit_lead.html', 
                          lead=lead, 
                          employees=get_all_employees(), 
                          customers=get_all_customers())
+
 
 @app.route('/leads/delete/<string:lead_id>')
 def delete_lead(lead_id):

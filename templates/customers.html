@@ -10,12 +10,11 @@
 
 <!-- 🔍 Filters + Sorting -->
 <form method="GET" action="{{ url_for('customers') }}" class="filter-form">
-    <!-- 🔽 Column Filters -->
     <label>Name:
-        <select name="name">
+        <select name="customerName">
             <option value="">All</option>
             {% for val in column_values.customerName %}
-            <option value="{{ val }}" {% if filters.customerName==val %}selected{% endif %}>{{ val }}</option>
+            <option value="{{ val }}" {% if filters.customerName == val %}selected{% endif %}>{{ val }}</option>
             {% endfor %}
         </select>
     </label>
@@ -24,7 +23,16 @@
         <select name="phone">
             <option value="">All</option>
             {% for val in column_values.phone %}
-            <option value="{{ val }}" {% if filters.phone==val %}selected{% endif %}>{{ val }}</option>
+            <option value="{{ val }}" {% if filters.phone == val %}selected{% endif %}>{{ val }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>Status:
+        <select name="status">
+            <option value="">All</option>
+            {% for val in column_values.status %}
+            <option value="{{ val }}" {% if filters.status == val %}selected{% endif %}>{{ val }}</option>
             {% endfor %}
         </select>
     </label>
@@ -33,7 +41,7 @@
         <select name="source">
             <option value="">All</option>
             {% for val in column_values.source %}
-            <option value="{{ val }}" {% if filters.source==val %}selected{% endif %}>{{ val }}</option>
+            <option value="{{ val }}" {% if filters.source == val %}selected{% endif %}>{{ val }}</option>
             {% endfor %}
         </select>
     </label>
@@ -42,7 +50,7 @@
         <select name="currentLocation">
             <option value="">All</option>
             {% for val in column_values.currentLocation %}
-            <option value="{{ val }}" {% if filters.currentLocation==val %}selected{% endif %}>{{ val }}</option>
+            <option value="{{ val }}" {% if filters.currentLocation == val %}selected{% endif %}>{{ val }}</option>
             {% endfor %}
         </select>
     </label>
@@ -51,25 +59,23 @@
         <select name="desiredDestination">
             <option value="">All</option>
             {% for val in column_values.desiredDestination %}
-            <option value="{{ val }}" {% if filters.desiredDestination==val %}selected{% endif %}>{{ val }}</option>
+            <option value="{{ val }}" {% if filters.desiredDestination == val %}selected{% endif %}>{{ val }}</option>
             {% endfor %}
         </select>
     </label>
 
-    <!-- 🔽 Sort Options -->
     <label>Sort By:
         <select name="sort_by">
-            {% for col in ['customerId', 'customerName', 'phone', 'source', 'currentLocation', 'desiredDestination',
-            'dateOfArrival', 'createdAt', 'updatedAt'] %}
-            <option value="{{ col }}" {% if sort_by==col %}selected{% endif %}>{{ col }}</option>
+            {% for col in ['customerId', 'customerName', 'phone', 'status', 'source', 'currentLocation', 'desiredDestination', 'dateOfArrival', 'createdAt', 'updatedAt'] %}
+            <option value="{{ col }}" {% if sort_by == col %}selected{% endif %}>{{ col }}</option>
             {% endfor %}
         </select>
     </label>
 
     <label>Order:
         <select name="sort_order">
-            <option value="asc" {% if sort_order=='asc' %}selected{% endif %}>Ascending</option>
-            <option value="desc" {% if sort_order=='desc' %}selected{% endif %}>Descending</option>
+            <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+            <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
         </select>
     </label>
 
@@ -84,6 +90,7 @@
             <th>ID</th>
             <th>Name</th>
             <th>Phone</th>
+            <th>Status</th>
             <th>Source</th>
             <th>Current Location</th>
             <th>Desired Destination</th>
@@ -99,6 +106,7 @@
             <td>{{ customer.customerId }}</td>
             <td>{{ customer.customerName }}</td>
             <td>{{ customer.phone }}</td>
+            <td>{{ customer.status }}</td>
             <td>{{ customer.source }}</td>
             <td>{{ customer.currentLocation }}</td>
             <td>{{ customer.desiredDestination }}</td>

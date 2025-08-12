@@ -4,8 +4,6 @@
 <h2>Add New Customer</h2>
 
 <form action="{{ url_for('add_customer') }}" method="POST">
-    <label for="customerId">Customer ID:</label>
-    <input type="text" name="customerId" required><br>
 
     <label for="customerName">Customer Name:</label>
     <input type="text" name="customerName" required><br>
@@ -13,8 +11,21 @@
     <label for="phone">Phone:</label>
     <input type="text" name="phone" required><br>
 
+    <!-- Status dropdown -->
+    <label for="status">Status:</label>
+    <select name="status" required>
+        {% for s in ['Pending', 'Contacted', 'Lost', 'Willing', 'Paid', 'Refund', 'Confirmed'] %}
+        <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+    </select><br>
+
+    <!-- Source dropdown -->
     <label for="source">Source:</label>
-    <input type="text" name="source" required><br>
+    <select name="source" required>
+        {% for s in ['Facebook', 'WhatsApp', 'Reference', 'TikTok', 'Other'] %}
+        <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+    </select><br>
 
     <label for="currentLocation">Current Location:</label>
     <input type="text" name="currentLocation" required><br>

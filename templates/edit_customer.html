@@ -19,13 +19,20 @@
         </div>
 
         <div class="form-group">
+            <label for="status">Status:</label>
+            <select id="status" name="status" required>
+                {% for s in ['Pending', 'Contacted', 'Lost', 'Willing', 'Paid', 'Refund', 'Confirmed'] %}
+                <option value="{{ s }}" {% if customer.status == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
             <label for="source">Source:</label>
             <select id="source" name="source" required>
-                <option value="Facebook" {% if customer.source == 'Facebook' %}selected{% endif %}>Facebook</option>
-                <option value="WhatsApp" {% if customer.source == 'WhatsApp' %}selected{% endif %}>WhatsApp</option>
-                <option value="Reference" {% if customer.source == 'Reference' %}selected{% endif %}>Reference</option>
-                <option value="TikTok" {% if customer.source == 'TikTok' %}selected{% endif %}>TikTok</option>
-                <option value="Other" {% if customer.source == 'Other' %}selected{% endif %}>Other</option>
+                {% for s in ['Facebook', 'WhatsApp', 'Reference', 'TikTok', 'Other'] %}
+                <option value="{{ s }}" {% if customer.source == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
             </select>
         </div>
 
