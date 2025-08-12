@@ -67,9 +67,7 @@ function checkStatusChange() {
     
     if (newStatus === 'Confirmed' && previousStatus !== 'Confirmed') {
         showAmountModal('Enter the closed amount for this lead:');
-    } else if (previousStatus === 'Confirmed' && newStatus !== 'Confirmed') {
-        showAmountModal('Enter the amount to deduct (previously confirmed amount):');
-    }
+    } 
     
     previousStatus = newStatus;
 }

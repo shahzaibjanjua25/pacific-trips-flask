@@ -473,52 +473,70 @@ def edit_lead(lead_id):
         new_emp_id = form['employeeId']
         new_cust_id = form['customerId']
         new_status = form['status']
-        amount_closed = float(form.get('amountClosed', 0))
+        amount_closed = float(form.get('amountClosed', 0))  # Amount from popup
         prev_amount = float(lead['amountClosed'] or 0)
 
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
-
-                # --- Get old/new employee info ---
+                # Get old/new employee info
                 cursor.execute("SELECT achievedAmount FROM employees WHERE empId = ?", (lead['employeeId'],))
                 old_emp = cursor.fetchone()
                 cursor.execute("SELECT empName, phoneNo, achievedAmount FROM employees WHERE empId = ?", (new_emp_id,))
                 new_emp = cursor.fetchone()
 
-                # --- Get new customer info ---
+                # Get new customer info
                 cursor.execute("""SELECT customerName, phone, currentLocation, desiredDestination, source, status 
                                   FROM customers WHERE customerId = ?""", (new_cust_id,))
                 new_cust = cursor.fetchone()
 
-                # --- Adjust achievedAmount for old and/or new employee ---
+                # Log current state for debugging
+                print(f"Lead ID: {lead_id}")
+                print(f"Old Status: {lead['status']}, New Status: {new_status}")
+                print(f"Old Employee ID: {lead['employeeId']}, New Employee ID: {new_emp_id}")
+                print(f"Previous Amount: {prev_amount}, New Amount: {amount_closed}")
+                print(f"Old Employee Achieved: {old_emp['achievedAmount'] if old_emp else 'N/A'}")
+                print(f"New Employee Achieved: {new_emp['achievedAmount'] if new_emp else 'N/A'}")
+
+                # Adjust achievedAmount
                 if lead['employeeId'] != new_emp_id:
-                    # Reduce old employee’s achievedAmount if confirmed
+                    # Different employee: adjust old and new employee amounts
                     if lead['status'] == 'Confirmed' and old_emp:
+                        new_achieved_old = old_emp['achievedAmount'] - prev_amount
                         cursor.execute("""
                             UPDATE employees
-                            SET achievedAmount = achievedAmount - ?
+                            SET achievedAmount = ?
                             WHERE empId = ?
-                        """, (prev_amount, lead['employeeId']))
-                    # Increase new employee’s achievedAmount if confirmed
+                        """, (new_achieved_old, lead['employeeId']))
+                        print(f"Subtracted {prev_amount} from old employee {lead['employeeId']}: {new_achieved_old}")
+
                     if new_status == 'Confirmed' and new_emp:
+                        new_achieved_new = new_emp['achievedAmount'] + amount_closed
                         cursor.execute("""
                             UPDATE employees
-                            SET achievedAmount = achievedAmount + ?
+                            SET achievedAmount = ?
                             WHERE empId = ?
-                        """, (amount_closed, new_emp_id))
+                        """, (new_achieved_new, new_emp_id))
+                        print(f"Added {amount_closed} to new employee {new_emp_id}: {new_achieved_new}")
                 else:
-                    # Same employee — adjust difference
-                    achieved = new_emp['achievedAmount']
+                    # Same employee: adjust based on status change
+                    achieved = new_emp['achievedAmount'] if new_emp else 0
                     if new_status == 'Confirmed':
                         if lead['status'] != 'Confirmed':
+                            # From non-Confirmed to Confirmed: add new amount
                             achieved += amount_closed
                         else:
+                            # From Confirmed to Confirmed: adjust difference
                             achieved = achieved - prev_amount + amount_closed
                     elif lead['status'] == 'Confirmed':
+                        # From Confirmed to non-Confirmed: subtract previous amount
                         achieved -= prev_amount
-                    cursor.execute("UPDATE employees SET achievedAmount = ? WHERE empId = ?", (achieved, new_emp_id))
+                        print(f"Subtracting {prev_amount} from employee {new_emp_id}: {achieved}")
 
-                # --- Update lead record ---
+                    if new_emp:
+                        cursor.execute("UPDATE employees SET achievedAmount = ? WHERE empId = ?", (achieved, new_emp_id))
+                        print(f"Updated employee {new_emp_id} achievedAmount to: {achieved}")
+
+                # Update lead record
                 cursor.execute("""
                     UPDATE leads
                     SET employeeId = ?, employeeName = ?, employeeContactNo = ?,
@@ -542,7 +560,7 @@ def edit_lead(lead_id):
                     lead_id
                 ))
 
-                # --- Update customer table to reflect lead changes ---
+                # Update customer table
                 if new_cust_id:
                     cursor.execute("""
                         UPDATE customers
