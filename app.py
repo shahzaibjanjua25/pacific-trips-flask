@@ -66,13 +66,15 @@ def get_filtered_sorted_leads(employee_id, customer_id, status, start_date, end_
             cursor.execute(query, params)
             return cursor.fetchall()
 
-def log_change(table_name, action, record_id, description, old_values=None, new_values=None):
+def log_change(table_name, action, record_id, description, old_values=None, new_values=None, changed_by=None, lead_employee=None):
     log_id = str(uuid.uuid4())[:8]
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
             cursor.execute('''
-                INSERT INTO logs (log_id, table_name, action, record_id, description, old_values, new_values, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO logs 
+                (log_id, table_name, action, record_id, description, 
+                 old_values, new_values, created_at, changed_by, lead_employee)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 log_id,
                 table_name,
@@ -81,10 +83,21 @@ def log_change(table_name, action, record_id, description, old_values=None, new_
                 description,
                 json.dumps(old_values) if old_values else None,
                 json.dumps(new_values) if new_values else None,
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                changed_by or 'system',
+                lead_employee
             ))
             conn.commit()
-
+def migrate_db():
+    with closing(get_db_connection()) as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute("ALTER TABLE logs ADD COLUMN changed_by TEXT DEFAULT 'system'")
+            cursor.execute("ALTER TABLE logs ADD COLUMN lead_employee TEXT")
+            conn.commit()
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
 @app.route('/')
 def index():
     return render_template('base.html')
@@ -140,6 +153,87 @@ def customers():
                          sort_by=sort_by,
                          sort_order=sort_order,
                          column_values=column_values)
+@app.route('/status_changes')
+def status_changes():
+    # Get filters from request
+    filters = {
+        'employee_id': request.args.get('employee_id', ''),
+        'start_date': request.args.get('start_date', ''),
+        'end_date': request.args.get('end_date', ''),
+        'status': request.args.get('status', '')
+    }
+    
+    # Build query for status changes
+    query = """
+        SELECT 
+            strftime('%Y-%m-%d', created_at) AS date,
+            json_extract(new_values, '$.status') AS new_status,
+            COALESCE(lead_employee, changed_by) AS employee_id,
+            COUNT(*) AS status_count
+        FROM logs
+        WHERE table_name = 'leads'
+          AND action = 'UPDATE'
+          AND json_extract(new_values, '$.status') IS NOT NULL
+    """
+    params = []
+    
+    if filters['employee_id']:
+        query += " AND (lead_employee = ? OR changed_by = ?)"
+        params.extend([filters['employee_id'], filters['employee_id']])
+    
+    if filters['status']:
+        query += " AND json_extract(new_values, '$.status') = ?"
+        params.append(filters['status'])
+    
+    if filters['start_date']:
+        query += " AND DATE(created_at) >= ?"
+        params.append(filters['start_date'])
+    
+    if filters['end_date']:
+        query += " AND DATE(created_at) <= ?"
+        params.append(filters['end_date'])
+    
+    query += " GROUP BY date, new_status, employee_id ORDER BY date"
+    
+    # Execute query
+    with closing(get_db_connection()) as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        status_data = cursor.fetchall()
+        
+        # Get employee names mapping
+        cursor.execute("SELECT empId, empName FROM employees")
+        employee_names = {row['empId']: row['empName'] for row in cursor.fetchall()}
+        
+        # Get unique statuses for dropdown
+        cursor.execute("SELECT DISTINCT status FROM leads")
+        statuses = [row['status'] for row in cursor.fetchall()]
+    
+    # Prepare data for chart with proper employee names
+    chart_data = {}
+    for row in status_data:
+        date = row['date']
+        status = row['new_status']
+        employee_id = row['employee_id']
+        employee_name = employee_names.get(employee_id, 'Unknown')
+        count = row['status_count']
+        
+        if date not in chart_data:
+            chart_data[date] = {}
+        
+        if employee_id not in chart_data[date]:
+            chart_data[date][employee_id] = {
+                'name': employee_name,
+                'statuses': {}
+            }
+        
+        chart_data[date][employee_id]['statuses'][status] = count
+    
+    return render_template('status_changes.html',
+                         chart_data=chart_data,
+                         employees=list(employee_names.items()),
+                         statuses=statuses,
+                         filters=filters)
 
 @app.route('/add_customer', methods=['GET', 'POST'])
 def add_customer():
@@ -574,15 +668,20 @@ def edit_lead(lead_id):
 
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
+                # Get current employee's achieved amount
                 cursor.execute("SELECT achievedAmount FROM employees WHERE empId = ?", (lead['employeeId'],))
                 old_emp = cursor.fetchone()
+                
+                # Get new employee's details
                 cursor.execute("SELECT empName, phoneNo, achievedAmount FROM employees WHERE empId = ?", (new_emp_id,))
                 new_emp = cursor.fetchone()
 
+                # Get customer details
                 cursor.execute("""SELECT customerName, phone, currentLocation, desiredDestination, source, status 
-                                  FROM customers WHERE customerId = ?""", (new_cust_id,))
+                                FROM customers WHERE customerId = ?""", (new_cust_id,))
                 new_cust = cursor.fetchone()
 
+                # Handle amount changes if employee changed
                 if lead['employeeId'] != new_emp_id:
                     if lead['status'] == 'Confirmed' and old_emp:
                         new_achieved_old = old_emp['achievedAmount'] - prev_amount
@@ -612,6 +711,7 @@ def edit_lead(lead_id):
                     if new_emp:
                         cursor.execute("UPDATE employees SET achievedAmount = ? WHERE empId = ?", (achieved, new_emp_id))
 
+                # Update the lead
                 cursor.execute("""
                     UPDATE leads
                     SET employeeId = ?, employeeName = ?, employeeContactNo = ?,
@@ -634,6 +734,7 @@ def edit_lead(lead_id):
                     lead_id
                 ))
 
+                # Update customer if needed
                 if new_cust_id:
                     cursor.execute("""
                         UPDATE customers
@@ -650,7 +751,10 @@ def edit_lead(lead_id):
 
                 conn.commit()
 
-        # Log the update
+        # Get the lead's original employee for logging
+        lead_employee = lead['employeeId']
+        
+        # Prepare description for log
         new_values = {
             'employeeId': new_emp_id,
             'customerId': new_cust_id,
@@ -659,17 +763,46 @@ def edit_lead(lead_id):
             'desiredDestination': form['desiredDestination'],
             'amountClosed': amount_closed if new_status == 'Confirmed' else 0
         }
-        changes = [f"{key} from '{old_values[key]}' to '{new_values[key]}'" for key in new_values if old_values[key] != new_values[key]]
-        description = f"Updated lead {lead_id}: {', '.join(changes)}" if changes else f"No changes to lead {lead_id}"
-        log_change('leads', 'UPDATE', lead_id, description, old_values=old_values, new_values=new_values)
+        
+        changes = [f"{key} from '{old_values[key]}' to '{new_values[key]}'" 
+                  for key in new_values if old_values[key] != new_values[key]]
+        
+        description = (f"Updated lead {lead_id}: {', '.join(changes)}" 
+                      if changes else f"No changes to lead {lead_id}")
+        
+        # Log the change with the lead's original employee
+        # Note: In a real app, current_user_id would come from your auth system
+        current_user_id = "current_user_id_placeholder"  
+        log_change('leads', 'UPDATE', lead_id, description, 
+                  old_values=old_values, new_values=new_values,
+                  changed_by=current_user_id,
+                  lead_employee=lead_employee)
 
         flash("Lead and linked customer/employee updated!", "info")
         return redirect(url_for('leads'))
 
     return render_template('edit_lead.html',
-                           lead=dict(lead),
-                           employees=get_all_employees(),
-                           customers=get_all_customers())
+                         lead=dict(lead),
+                         employees=get_all_employees(),
+                         customers=get_all_customers())
+def init_db():
+    with closing(get_db_connection()) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS logs (
+                log_id TEXT PRIMARY KEY,
+                table_name TEXT NOT NULL,
+                action TEXT NOT NULL,
+                record_id TEXT NOT NULL,
+                description TEXT,
+                old_values TEXT,
+                new_values TEXT,
+                created_at TEXT NOT NULL,
+                changed_by TEXT,
+                lead_employee TEXT
+            )
+        ''')
+        conn.commit()
 
 @app.route('/leads/delete/<string:lead_id>')
 def delete_lead(lead_id):

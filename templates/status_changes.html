@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Lead Status Changes Tracking</h2>
+
+<!-- Filter Form -->
+<form method="GET" action="{{ url_for('status_changes') }}" class="filter-form">
+    <div class="form-group">
+        <label for="employee_id">Employee:</label>
+        <select name="employee_id" id="employee_id">
+            <option value="">All Employees</option>
+            {% for emp in employees %}
+            <option value="{{ emp.empId }}" {% if filters.employee_id == emp.empId %}selected{% endif %}>
+                {{ emp.empName }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="status">Status:</label>
+        <select name="status" id="status">
+            <option value="">All Statuses</option>
+            {% for status in statuses %}
+            <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>
+                {{ status }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="start_date">Start Date:</label>
+        <input type="date" name="start_date" value="{{ filters.start_date }}">
+    </div>
+
+    <div class="form-group">
+        <label for="end_date">End Date:</label>
+        <input type="date" name="end_date" value="{{ filters.end_date }}">
+    </div>
+
+    <button type="submit" class="btn">Apply Filters</button>
+    <a href="{{ url_for('status_changes') }}" class="btn secondary">Reset</a>
+</form>
+
+<!-- Chart Container -->
+<div class="chart-container">
+    <canvas id="statusChart"></canvas>
+</div>
+
+<!-- Detailed Changes Table -->
+<!-- Detailed Changes Table -->
+<h3>Detailed Changes</h3>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Employee</th>
+            <th>Status</th>
+            <th>Count</th>
+        </tr>
+    </thead>
+    <tbody>
+       {% for date, employees_data in chart_data.items() %}
+        {% for employee_id, employee_info in employees_data.items() %}
+            {% for status, count in employee_info.statuses.items() %}
+            <tr>
+                <td>{{ date }}</td>
+                <td>{{ employee_info.name or 'System' }}</td>
+                <td>{{ status }}</td>
+                <td>{{ count }}</td>
+            </tr>
+            {% endfor %}
+        {% endfor %}
+    {% endfor %}
+    </tbody>
+</table>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Prepare data for the chart
+    const chartData = {
+        labels: [],  // Dates will go here
+        datasets: [] // Employee status changes will go here
+    };
+
+    // Get unique statuses for coloring
+    const statusColors = {
+        'New': '#3498db',
+        'Contacted': '#f1c40f',
+        'Qualified': '#2ecc71',
+        'Proposal Sent': '#e67e22',
+        'Negotiation': '#9b59b6',
+        'Confirmed': '#27ae60',
+        'Lost': '#e74c3c',
+        'On Hold': '#95a5a6'
+    };
+
+    // Process the chart_data from Flask
+    // Process the chart_data from Flask
+const processedData = {};
+{% for date, employees_data in chart_data.items() %}
+    chartData.labels.push("{{ date }}");
+    
+    {% for employee_id, employee_info in employees_data.items() %}
+        {% for status, count in employee_info.statuses.items() %}
+            const key = "{{ employee_id }}-{{ status }}";
+            if (!processedData[key]) {
+                processedData[key] = {
+                    label: "{{ employee_info.name }} - {{ status }}",
+                    data: new Array(chartData.labels.length).fill(0),
+                    backgroundColor: statusColors["{{ status }}"] || '#95a5a6',
+                    borderColor: statusColors["{{ status }}"] || '#95a5a6',
+                    borderWidth: 1
+                };
+            }
+            processedData[key].data[chartData.labels.length - 1] = {{ count }};
+        {% endfor %}
+    {% endfor %}
+{% endfor %}
+
+    // Add datasets to chartData
+    for (const key in processedData) {
+        chartData.datasets.push(processedData[key]);
+    }
+
+    // Create the chart
+    const ctx = document.getElementById('statusChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: chartData,
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    stacked: true,
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Lead Status Changes Over Time'
+                },
+                tooltip: {
+                    callbacks: {
+                        afterBody: function(context) {
+                            const dataset = context[0].dataset;
+                            return `Employee: ${dataset.label.split(' - ')[0]}\nStatus: ${dataset.label.split(' - ')[1]}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+
+<style>
+.filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+    align-items: flex-end;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-container {
+    margin: 30px 0;
+    height: 400px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.data-table th, .data-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.data-table th {
+    background-color: #f2f2f2;
+}
+
+.data-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+</style>
+{% endblock %}
