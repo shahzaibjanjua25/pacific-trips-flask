@@ -3,8 +3,9 @@
 {% block content %}
 <h2>Add Employee</h2>
 <form method="POST" action="{{ url_for('add_employee') }}" class="form-container">
-    <label for="empId">Employee ID</label>
-    <input type="text" name="empId" required>
+    <!-- Optional: show the generated empId -->
+    <!-- <label for="empId">Employee ID (Auto-generated)</label>
+    <input type="text" value="{{ empId }}" readonly> -->
 
     <label for="empName">Name</label>
     <input type="text" name="empName" required>

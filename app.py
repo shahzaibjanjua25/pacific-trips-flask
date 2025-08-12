@@ -261,7 +261,7 @@ def employees():
 @app.route('/employee/add', methods=['GET', 'POST'])
 def add_employee():
     if request.method == 'POST':
-        empId = str(uuid.uuid4())[:8]
+        empId = str(uuid.uuid4())[:8]  # Generate here
         form = request.form
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
@@ -277,10 +277,13 @@ def add_employee():
                     form['achievedAmount']
                 ))
                 conn.commit()
-        flash("Employee added!", "success")
+        flash(f"Employee added! ID: {empId}", "success")
         return redirect(url_for('employees'))
 
-    return render_template('add_employee.html')
+    # Generate an ID for display when GET request
+    preview_emp_id = str(uuid.uuid4())[:8]
+    return render_template('add_employee.html', empId=preview_emp_id)
+
 
 @app.route('/employee/edit/<string:emp_id>', methods=['GET', 'POST'])
 def edit_employee(emp_id):
@@ -506,19 +509,22 @@ def edit_lead(lead_id):
                     lead_id
                 ))
 
-                # 🔹 NEW: also update the linked customer's status
-                cursor.execute('''
-                    UPDATE customers
-                    SET status = ?
-                    WHERE customerId = ?
-                ''', (
-                    form['status'],
-                    form['customerId']
-                ))
+                # 🔹 Safeguard: only update customer's status if it matches the lead's old status
+                cursor.execute("SELECT status FROM customers WHERE customerId = ?", (form['customerId'],))
+                customer_status = cursor.fetchone()['status']
+                if customer_status == lead['status']:
+                    cursor.execute('''
+                        UPDATE customers
+                        SET status = ?
+                        WHERE customerId = ?
+                    ''', (
+                        form['status'],
+                        form['customerId']
+                    ))
 
                 conn.commit()
 
-        flash("Lead, related customer, and employee updated!", "info")
+        flash("Lead updated! (Customer status synced if matched.)", "info")
         return redirect(url_for('leads'))
 
     return render_template('edit_lead.html', 
