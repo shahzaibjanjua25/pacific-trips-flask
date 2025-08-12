@@ -14,13 +14,9 @@ DATABASE = os.path.join(BASE_DIR, 'EMS.db')
 def get_db_connection():
     conn = sqlite3.connect(DATABASE, timeout=10)
     conn.row_factory = sqlite3.Row
-    # Enable WAL mode for better concurrency
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
 
-# -----------------------------
-# Utility Functions
-# -----------------------------
 def get_all_employees():
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
@@ -33,7 +29,7 @@ def get_all_customers():
             cursor.execute("SELECT customerId, customerName FROM customers")
             return cursor.fetchall()
 
-def get_filtered_sorted_leads(employee_id, customer_id, status, sort_by, sort_order):
+def get_filtered_sorted_leads(employee_id, customer_id, status, start_date, end_date, sort_by, sort_order):
     query = '''
         SELECT leads.*, 
                customers.customerName AS cust_name, 
@@ -54,6 +50,12 @@ def get_filtered_sorted_leads(employee_id, customer_id, status, sort_by, sort_or
     if status:
         query += ' AND leads.status = ?'
         params.append(status)
+    if start_date:
+        query += ' AND DATE(leads.createdAt) >= ?'
+        params.append(start_date)
+    if end_date:
+        query += ' AND DATE(leads.createdAt) <= ?'
+        params.append(end_date)
 
     query += f' ORDER BY {sort_by} {sort_order.upper()}'
 
@@ -62,24 +64,20 @@ def get_filtered_sorted_leads(employee_id, customer_id, status, sort_by, sort_or
             cursor.execute(query, params)
             return cursor.fetchall()
 
-# -----------------------------
-# Home Page
-# -----------------------------
 @app.route('/')
 def index():
     return render_template('base.html')
 
-# -----------------------------
-# CUSTOMERS
-# -----------------------------
 @app.route('/customers')
 def customers():
     filters = {
-        "customerName": request.args.get("name", ""),
+        "customerName": request.args.get("customerName", ""),
         "phone": request.args.get("phone", ""),
         "source": request.args.get("source", ""),
         "currentLocation": request.args.get("currentLocation", ""),
-        "desiredDestination": request.args.get("desiredDestination", "")
+        "desiredDestination": request.args.get("desiredDestination", ""),
+        "start_date": request.args.get("start_date", ""),
+        "end_date": request.args.get("end_date", "")
     }
 
     sort_by = request.args.get("sort_by", "customerName")
@@ -89,9 +87,16 @@ def customers():
     params = []
 
     for col, val in filters.items():
-        if val:
+        if val and col not in ["start_date", "end_date"]:
             query += f" AND {col} = ?"
             params.append(val)
+
+    if filters['start_date']:
+        query += " AND DATE(createdAt) >= ?"
+        params.append(filters['start_date'])
+    if filters['end_date']:
+        query += " AND DATE(createdAt) <= ?"
+        params.append(filters['end_date'])
 
     query += f" ORDER BY {sort_by} {sort_order.upper()}"
 
@@ -100,11 +105,13 @@ def customers():
             cursor.execute(query, params)
             customers = cursor.fetchall()
 
-            # For dropdowns
             column_values = {}
             for col in filters:
-                cursor.execute(f"SELECT DISTINCT {col} FROM customers ORDER BY {col}")
-                column_values[col] = [row[0] for row in cursor.fetchall() if row[0]]
+                if col not in ["start_date", "end_date"]:
+                    cursor.execute(f"SELECT DISTINCT {col} FROM customers ORDER BY {col}")
+                    column_values[col] = [row[0] for row in cursor.fetchall() if row[0]]
+                else:
+                    column_values[col] = []  # No dropdown for dates
 
     return render_template("customers.html",
                          customers=customers,
@@ -116,7 +123,7 @@ def customers():
 @app.route('/add_customer', methods=['GET', 'POST'])
 def add_customer():
     if request.method == 'POST':
-        new_id = str(uuid.uuid4())[:8]  # Auto-generate ID
+        new_id = str(uuid.uuid4())[:8]
         form = request.form
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
@@ -140,7 +147,6 @@ def add_customer():
 
     return render_template('add_customer.html')
 
-
 @app.route('/customers/edit/<string:customer_id>', methods=['GET', 'POST'])
 def edit_customer(customer_id):
     with closing(get_db_connection()) as conn:
@@ -156,7 +162,6 @@ def edit_customer(customer_id):
         form = request.form
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
-                # Update customer
                 cursor.execute('''
                     UPDATE customers
                     SET customerName = ?, phone = ?, status = ?, source = ?, currentLocation = ?, 
@@ -173,7 +178,6 @@ def edit_customer(customer_id):
                     customer_id
                 ))
 
-                # Update related leads to keep status and other info in sync
                 cursor.execute('''
                     UPDATE leads
                     SET status = ?, 
@@ -185,7 +189,7 @@ def edit_customer(customer_id):
                 ''', (
                     form['status'],
                     form['source'],
-                    form['currentLocation'],  # Assuming currentLocation in customers = currentAddress in leads
+                    form['currentLocation'],
                     form['desiredDestination'],
                     customer_id
                 ))
@@ -197,7 +201,6 @@ def edit_customer(customer_id):
 
     return render_template('edit_customer.html', customer=customer)
 
-
 @app.route('/customers/delete/<string:customer_id>')
 def delete_customer(customer_id):
     with closing(get_db_connection()) as conn:
@@ -207,9 +210,6 @@ def delete_customer(customer_id):
     flash("Customer deleted!", "success")
     return redirect(url_for('customers'))
 
-# -----------------------------
-# EMPLOYEES
-# -----------------------------
 @app.route('/employees')
 def employees():
     filters = {
@@ -261,7 +261,7 @@ def employees():
 @app.route('/employee/add', methods=['GET', 'POST'])
 def add_employee():
     if request.method == 'POST':
-        empId = str(uuid.uuid4())[:8]  # Generate here
+        empId = str(uuid.uuid4())[:8]
         form = request.form
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
@@ -280,17 +280,15 @@ def add_employee():
         flash(f"Employee added! ID: {empId}", "success")
         return redirect(url_for('employees'))
 
-    # Generate an ID for display when GET request
     preview_emp_id = str(uuid.uuid4())[:8]
     return render_template('add_employee.html', empId=preview_emp_id)
-
 
 @app.route('/employee/edit/<string:emp_id>', methods=['GET', 'POST'])
 def edit_employee(emp_id):
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
             cursor.execute("SELECT * FROM employees WHERE empId = ?", (emp_id,))
-            employee = cursor.fetchone()
+            employee = cursor.fetchoneස
 
     if not employee:
         flash("Employee not found", "danger")
@@ -326,54 +324,31 @@ def delete_employee(emp_id):
     flash("Employee deleted!", "success")
     return redirect(url_for('employees'))
 
-# -----------------------------
-# LEADS
-# -----------------------------
 @app.route('/leads', methods=['GET'])
 def leads():
     filters = {
-        "employeeId": request.args.get('employeeId'),
-        "customerId": request.args.get('customerId'),
-        "status": request.args.get('status'),
-        "source": request.args.get('source')
+        "employeeId": request.args.get('employeeId', ''),
+        "customerId": request.args.get('customerId', ''),
+        "status": request.args.get('status', ''),
+        "start_date": request.args.get('start_date', ''),
+        "end_date": request.args.get('end_date', '')
     }
     
     sort_by = request.args.get('sort_by', 'employeeLeadId')
     sort_order = request.args.get('sort_order', 'asc')
 
-    query = '''
-        SELECT leads.*, 
-               customers.customerName AS cust_name, 
-               employees.empName AS emp_name
-        FROM leads
-        LEFT JOIN customers ON leads.customerId = customers.customerId
-        LEFT JOIN employees ON leads.employeeId = employees.empId
-        WHERE 1=1
-    '''
-    params = []
-
-    if filters["employeeId"]:
-        query += ' AND leads.employeeId = ?'
-        params.append(filters["employeeId"])
-    if filters["customerId"]:
-        query += ' AND leads.customerId = ?'
-        params.append(filters["customerId"])
-    if filters["status"]:
-        query += ' AND leads.status = ?'
-        params.append(filters["status"])
-    if filters["source"]:
-        query += ' AND leads.source LIKE ?'
-        params.append(f'%{filters["source"]}%')
-
-    query += f' ORDER BY {sort_by} {sort_order.upper()}'
-
-    with closing(get_db_connection()) as conn:
-        with closing(conn.cursor()) as cursor:
-            cursor.execute(query, params)
-            leads = cursor.fetchall()
+    leads = get_filtered_sorted_leads(
+        filters["employeeId"],
+        filters["customerId"],
+        filters["status"],
+        filters["start_date"],
+        filters["end_date"],
+        sort_by,
+        sort_order
+    )
             
-            employees = get_all_employees()
-            customers = get_all_customers()
+    employees = get_all_employees()
+    customers = get_all_customers()
 
     return render_template("leads.html", 
                          leads=leads,
@@ -391,10 +366,19 @@ def add_lead():
         form = request.form
         lead_id = str(uuid.uuid4())[:8]
         amount_closed = float(form.get('amountClosed', 0))
+        customer_id = form['customerId']
 
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
-                # Get employee details
+                # ✅ Check if customer is already assigned to any lead
+                cursor.execute("SELECT COUNT(*) FROM leads WHERE customerId = ?", (customer_id,))
+                count = cursor.fetchone()[0]
+
+                if count > 0:
+                    flash("This customer is already assigned to another lead!", "danger")
+                    return redirect(url_for('add_lead'))
+
+                # ✅ Continue with adding the lead if not already assigned
                 cursor.execute("""
                     SELECT empId, empName, phoneNo, achievedAmount 
                     FROM employees 
@@ -405,18 +389,16 @@ def add_lead():
                     flash("Employee not found!", "danger")
                     return redirect(url_for('add_lead'))
 
-                # Get customer details
                 cursor.execute("""
                     SELECT customerId, customerName, phone, currentLocation, desiredDestination, source
                     FROM customers
                     WHERE customerId = ?
-                """, (form['customerId'],))
+                """, (customer_id,))
                 customer = cursor.fetchone()
                 if not customer:
                     flash("Customer not found!", "danger")
                     return redirect(url_for('add_lead'))
 
-                # Update achieved amount if Confirmed
                 if form['status'] == 'Confirmed' and amount_closed > 0:
                     new_achieved = employee['achievedAmount'] + amount_closed
                     cursor.execute("""
@@ -425,7 +407,6 @@ def add_lead():
                         WHERE empId = ?
                     """, (new_achieved, employee['empId']))
 
-      
                 cursor.execute("""
                     INSERT INTO leads (
                         employeeLeadId, employeeId, employeeName, employeeContactNo,
@@ -443,7 +424,7 @@ def add_lead():
                     customer['currentLocation'],
                     customer['desiredDestination'],
                     form['status'],
-                    customer['source'],  # from customers table
+                    customer['source'],
                     amount_closed if form['status'] == 'Confirmed' else 0
                 ))
 
@@ -473,33 +454,21 @@ def edit_lead(lead_id):
         new_emp_id = form['employeeId']
         new_cust_id = form['customerId']
         new_status = form['status']
-        amount_closed = float(form.get('amountClosed', 0))  # Amount from popup
+        amount_closed = float(form.get('amountClosed', 0))
         prev_amount = float(lead['amountClosed'] or 0)
 
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
-                # Get old/new employee info
                 cursor.execute("SELECT achievedAmount FROM employees WHERE empId = ?", (lead['employeeId'],))
                 old_emp = cursor.fetchone()
                 cursor.execute("SELECT empName, phoneNo, achievedAmount FROM employees WHERE empId = ?", (new_emp_id,))
                 new_emp = cursor.fetchone()
 
-                # Get new customer info
                 cursor.execute("""SELECT customerName, phone, currentLocation, desiredDestination, source, status 
                                   FROM customers WHERE customerId = ?""", (new_cust_id,))
                 new_cust = cursor.fetchone()
 
-                # Log current state for debugging
-                print(f"Lead ID: {lead_id}")
-                print(f"Old Status: {lead['status']}, New Status: {new_status}")
-                print(f"Old Employee ID: {lead['employeeId']}, New Employee ID: {new_emp_id}")
-                print(f"Previous Amount: {prev_amount}, New Amount: {amount_closed}")
-                print(f"Old Employee Achieved: {old_emp['achievedAmount'] if old_emp else 'N/A'}")
-                print(f"New Employee Achieved: {new_emp['achievedAmount'] if new_emp else 'N/A'}")
-
-                # Adjust achievedAmount
                 if lead['employeeId'] != new_emp_id:
-                    # Different employee: adjust old and new employee amounts
                     if lead['status'] == 'Confirmed' and old_emp:
                         new_achieved_old = old_emp['achievedAmount'] - prev_amount
                         cursor.execute("""
@@ -507,7 +476,6 @@ def edit_lead(lead_id):
                             SET achievedAmount = ?
                             WHERE empId = ?
                         """, (new_achieved_old, lead['employeeId']))
-                        print(f"Subtracted {prev_amount} from old employee {lead['employeeId']}: {new_achieved_old}")
 
                     if new_status == 'Confirmed' and new_emp:
                         new_achieved_new = new_emp['achievedAmount'] + amount_closed
@@ -516,33 +484,25 @@ def edit_lead(lead_id):
                             SET achievedAmount = ?
                             WHERE empId = ?
                         """, (new_achieved_new, new_emp_id))
-                        print(f"Added {amount_closed} to new employee {new_emp_id}: {new_achieved_new}")
                 else:
-                    # Same employee: adjust based on status change
                     achieved = new_emp['achievedAmount'] if new_emp else 0
                     if new_status == 'Confirmed':
                         if lead['status'] != 'Confirmed':
-                            # From non-Confirmed to Confirmed: add new amount
                             achieved += amount_closed
                         else:
-                            # From Confirmed to Confirmed: adjust difference
                             achieved = achieved - prev_amount + amount_closed
                     elif lead['status'] == 'Confirmed':
-                        # From Confirmed to non-Confirmed: subtract previous amount
                         achieved -= prev_amount
-                        print(f"Subtracting {prev_amount} from employee {new_emp_id}: {achieved}")
 
                     if new_emp:
                         cursor.execute("UPDATE employees SET achievedAmount = ? WHERE empId = ?", (achieved, new_emp_id))
-                        print(f"Updated employee {new_emp_id} achievedAmount to: {achieved}")
 
-                # Update lead record
                 cursor.execute("""
                     UPDATE leads
                     SET employeeId = ?, employeeName = ?, employeeContactNo = ?,
                         customerId = ?, customerName = ?, customerContactNo = ?,
                         currentAddress = ?, desiredDestination = ?,
-                        status = ?, source = ?, 
+                        status = ?, 
                         amountClosed = ?, updatedAt = datetime('now')
                     WHERE employeeLeadId = ?
                 """, (
@@ -555,23 +515,19 @@ def edit_lead(lead_id):
                     form['currentAddress'],
                     form['desiredDestination'],
                     new_status,
-                    form['source'],
                     amount_closed if new_status == 'Confirmed' else 0,
                     lead_id
                 ))
 
-                # Update customer table
                 if new_cust_id:
                     cursor.execute("""
                         UPDATE customers
                         SET status = ?,
-                            source = ?,
                             currentLocation = ?,
                             desiredDestination = ?
                         WHERE customerId = ?
                     """, (
                         new_status,
-                        form['source'],
                         form['currentAddress'],
                         form['desiredDestination'],
                         new_cust_id
@@ -586,8 +542,6 @@ def edit_lead(lead_id):
                            lead=dict(lead),
                            employees=get_all_employees(),
                            customers=get_all_customers())
-
-
 
 @app.route('/leads/delete/<string:lead_id>')
 def delete_lead(lead_id):
@@ -608,17 +562,15 @@ def create_lead():
             with closing(conn.cursor()) as cursor:
                 cursor.execute("""
                     INSERT INTO employee_leads (
-                        employeeId, customerId, status, source, currentAddress, 
+                        employeeId, customerId, status, currentAddress, 
                         desiredDestination, createdAt, updatedAt
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+                    ) VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
                 """, (
                     request.form["employeeId"],
                     request.form["customerId"],
                     request.form["status"],
-                    request.form["source"],
                     request.form["currentAddress"],
                     request.form["desiredDestination"]
-                   
                 ))
                 conn.commit()
         flash("Lead created successfully!")
@@ -630,15 +582,12 @@ def create_lead():
 def dashboard():
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
-            # Get leads by status (convert Row to dict)
             cursor.execute('SELECT status, COUNT(*) as count FROM leads GROUP BY status')
             leads_by_status = [dict(row) for row in cursor.fetchall()]
             
-            # Get leads by source (convert Row to dict)
-            cursor.execute('SELECT source, COUNT(*) as count FROM leads GROUP BY source')
+            cursor.execute('SELECT COUNT(*) as count FROM leads GROUP BY status')
             leads_by_source = [dict(row) for row in cursor.fetchall()]
             
-            # Get leads by date (convert Row to dict)
             cursor.execute('''
                 SELECT DATE(createdAt) as date, COUNT(*) as count 
                 FROM leads 
@@ -647,7 +596,6 @@ def dashboard():
             ''')
             leads_by_date = [dict(row) for row in cursor.fetchall()]
             
-            # Get total counts
             cursor.execute('SELECT COUNT(*) FROM customers')
             total_customers = cursor.fetchone()[0]
             cursor.execute('SELECT COUNT(*) FROM employees')
@@ -663,8 +611,5 @@ def dashboard():
                          total_employees=total_employees,
                          total_leads=total_leads)
 
-# -----------------------------
-# Run App
-# -----------------------------
 if __name__ == '__main__':
     app.run(debug=True)

@@ -41,18 +41,17 @@
         </select>
     </label>
 
-    <label>Source:
-        <select name="source">
-            <option value="">All</option>
-            {% for val in leads | map(attribute='source') | unique %}
-            <option value="{{ val }}" {% if filters.source == val %}selected{% endif %}>{{ val }}</option>
-            {% endfor %}
-        </select>
+    <label>Created From:
+        <input type="date" name="start_date" value="{{ filters.start_date }}">
+    </label>
+
+    <label>Created To:
+        <input type="date" name="end_date" value="{{ filters.end_date }}">
     </label>
 
     <label>Sort By:
         <select name="sort_by">
-            {% for col in ['employeeLeadId', 'employeeId', 'empName', 'customerId', 'customerName', 'status', 'source', 'currentAddress', 'desiredDestination', 'dateSource', 'createdAt', 'updatedAt'] %}
+            {% for col in ['employeeLeadId', 'employeeId', 'empName', 'customerId', 'customerName', 'status', 'currentAddress', 'desiredDestination', 'createdAt', 'updatedAt'] %}
             <option value="{{ col }}" {% if sort_by == col %}selected{% endif %}>{{ col }}</option>
             {% endfor %}
         </select>
@@ -77,10 +76,8 @@
             <th>Employee</th>
             <th>Customer</th>
             <th>Status</th>
-            <th>Source</th>
             <th>Current Address</th>
             <th>Destination</th>
-            <th>Date Source</th>
             <th>Created</th>
             <th>Updated</th>
             <th>Actions</th>
@@ -93,10 +90,9 @@
             <td>{{ lead.emp_name }}</td>
             <td>{{ lead.cust_name }}</td>
             <td>{{ lead.status }}</td>
-            <td>{{ lead.source }}</td>
             <td>{{ lead.currentAddress }}</td>
             <td>{{ lead.desiredDestination }}</td>
-            <td>{{ lead.dateSource or '' }}</td>
+            <!-- <td>{{ lead.dateSource or '' }}</td> -->
             <td>{{ lead.createdAt }}</td>
             <td>{{ lead.updatedAt }}</td>
             <td>

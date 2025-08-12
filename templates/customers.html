@@ -64,6 +64,14 @@
         </select>
     </label>
 
+    <label>Created From:
+        <input type="date" name="start_date" value="{{ filters.start_date }}">
+    </label>
+
+    <label>Created To:
+        <input type="date" name="end_date" value="{{ filters.end_date }}">
+    </label>
+
     <label>Sort By:
         <select name="sort_by">
             {% for col in ['customerId', 'customerName', 'phone', 'status', 'source', 'currentLocation', 'desiredDestination', 'dateOfArrival', 'createdAt', 'updatedAt'] %}
@@ -122,4 +130,5 @@
         {% endfor %}
     </tbody>
 </table>
+<!-- <style></style> -->
 {% endblock %}
