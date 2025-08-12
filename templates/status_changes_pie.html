@@ -6,8 +6,8 @@
 
     <!-- Filter Form -->
     <div class="filter-card">
-        <form method="GET" action="{{ url_for('status_changes') }}" class="filter-form">
-            <div class="form-row">
+        <form method="GET" action="{{ url_for('status_changes') }}" class="filter-form" >
+            <div class="form-row"style=" width: 1160px;">
                 <div class="form-group">
                     <label for="employee_id">Employee:</label>
                     <select name="employee_id" id="employee_id" class="form-control">
@@ -143,17 +143,20 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         padding: 20px;
         margin-bottom: 20px;
+        width: 1160px;
     }
 
     .filter-form .form-row {
         display: flex;
         gap: 20px;
         margin-bottom: 15px;
+         width: 1160px;
     }
 
     .filter-form .form-group {
         flex: 1;
         margin-bottom: 0;
+        
     }
 
     .filter-form label {
@@ -167,6 +170,8 @@
         padding: 8px 12px;
         border: 1px solid #ddd;
         border-radius: 4px;
+        
+        
     }
 
     .form-actions {
