@@ -3,6 +3,8 @@ import sqlite3
 import os
 import uuid
 from contextlib import closing
+import json
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key'
@@ -63,6 +65,25 @@ def get_filtered_sorted_leads(employee_id, customer_id, status, start_date, end_
         with closing(conn.cursor()) as cursor:
             cursor.execute(query, params)
             return cursor.fetchall()
+
+def log_change(table_name, action, record_id, description, old_values=None, new_values=None):
+    log_id = str(uuid.uuid4())[:8]
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute('''
+                INSERT INTO logs (log_id, table_name, action, record_id, description, old_values, new_values, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                log_id,
+                table_name,
+                action,
+                record_id,
+                description,
+                json.dumps(old_values) if old_values else None,
+                json.dumps(new_values) if new_values else None,
+                datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            ))
+            conn.commit()
 
 @app.route('/')
 def index():
@@ -125,6 +146,16 @@ def add_customer():
     if request.method == 'POST':
         new_id = str(uuid.uuid4())[:8]
         form = request.form
+        new_values = {
+            'customerId': new_id,
+            'customerName': form['customerName'],
+            'phone': form['phone'],
+            'status': form['status'],
+            'source': form['source'],
+            'currentLocation': form['currentLocation'],
+            'desiredDestination': form['desiredDestination'],
+            'dateOfArrival': form['dateOfArrival']
+        }
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
                 cursor.execute('''
@@ -142,6 +173,11 @@ def add_customer():
                     form['dateOfArrival']
                 ))
                 conn.commit()
+        
+        # Log the insertion
+        description = f"Added customer {form['customerName']} with ID {new_id}"
+        log_change('customers', 'INSERT', new_id, description, new_values=new_values)
+        
         flash("Customer added!", "success")
         return redirect(url_for('customers'))
 
@@ -160,6 +196,17 @@ def edit_customer(customer_id):
 
     if request.method == 'POST':
         form = request.form
+        old_values = dict(customer)  # Convert SQLite Row to dict
+        new_values = {
+            'customerName': form['customerName'],
+            'phone': form['phone'],
+            'status': form['status'],
+            'source': form['source'],
+            'currentLocation': form['currentLocation'],
+            'desiredDestination': form['desiredDestination'],
+            'dateOfArrival': form['dateOfArrival']
+        }
+        
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
                 cursor.execute('''
@@ -196,6 +243,11 @@ def edit_customer(customer_id):
                 
                 conn.commit()
 
+        # Log the update
+        changes = [f"{key} from '{old_values[key]}' to '{new_values[key]}'" for key in new_values if old_values[key] != new_values[key]]
+        description = f"Updated customer {form['customerName']} (ID: {customer_id}): {', '.join(changes)}" if changes else f"No changes to customer {form['customerName']} (ID: {customer_id})"
+        log_change('customers', 'UPDATE', customer_id, description, old_values=old_values, new_values=new_values)
+
         flash("Customer and related leads updated!", "info")
         return redirect(url_for('customers'))
 
@@ -205,9 +257,20 @@ def edit_customer(customer_id):
 def delete_customer(customer_id):
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
-            cursor.execute("DELETE FROM customers WHERE customerId = ?", (customer_id,))
-            conn.commit()
-    flash("Customer deleted!", "success")
+            cursor.execute("SELECT * FROM customers WHERE customerId = ?", (customer_id,))
+            customer = cursor.fetchone()
+            if customer:
+                old_values = dict(customer)
+                cursor.execute("DELETE FROM customers WHERE customerId = ?", (customer_id,))
+                conn.commit()
+                
+                # Log the deletion
+                description = f"Deleted customer {customer['customerName']} (ID: {customer_id})"
+                log_change('customers', 'DELETE', customer_id, description, old_values=old_values)
+                
+                flash("Customer deleted!", "success")
+            else:
+                flash("Customer not found!", "danger")
     return redirect(url_for('customers'))
 
 @app.route('/employees')
@@ -263,6 +326,13 @@ def add_employee():
     if request.method == 'POST':
         empId = str(uuid.uuid4())[:8]
         form = request.form
+        new_values = {
+            'empId': empId,
+            'empName': form['empName'],
+            'phoneNo': form['phoneNo'],
+            'targetAmount': form['targetAmount'],
+            'achievedAmount': form['achievedAmount']
+        }
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
                 cursor.execute('''
@@ -277,6 +347,11 @@ def add_employee():
                     form['achievedAmount']
                 ))
                 conn.commit()
+        
+        # Log the insertion
+        description = f"Added employee {form['empName']} with ID {empId}"
+        log_change('employees', 'INSERT', empId, description, new_values=new_values)
+        
         flash(f"Employee added! ID: {empId}", "success")
         return redirect(url_for('employees'))
 
@@ -288,7 +363,7 @@ def edit_employee(emp_id):
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
             cursor.execute("SELECT * FROM employees WHERE empId = ?", (emp_id,))
-            employee = cursor.fetchoneස
+            employee = cursor.fetchone()
 
     if not employee:
         flash("Employee not found", "danger")
@@ -296,6 +371,13 @@ def edit_employee(emp_id):
 
     if request.method == 'POST':
         form = request.form
+        old_values = dict(employee)
+        new_values = {
+            'empName': form['empName'],
+            'phoneNo': form['phoneNo'],
+            'targetAmount': form['targetAmount'],
+            'achievedAmount': form['achievedAmount']
+        }
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
                 cursor.execute('''
@@ -310,6 +392,12 @@ def edit_employee(emp_id):
                     emp_id
                 ))
                 conn.commit()
+        
+        # Log the update
+        changes = [f"{key} from '{old_values[key]}' to '{new_values[key]}'" for key in new_values if old_values[key] != new_values[key]]
+        description = f"Updated employee {form['empName']} (ID: {emp_id}): {', '.join(changes)}" if changes else f"No changes to employee {form['empName']} (ID: {emp_id})"
+        log_change('employees', 'UPDATE', emp_id, description, old_values=old_values, new_values=new_values)
+        
         flash("Employee updated!", "info")
         return redirect(url_for('employees'))
 
@@ -319,9 +407,20 @@ def edit_employee(emp_id):
 def delete_employee(emp_id):
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
-            cursor.execute("DELETE FROM employees WHERE empId = ?", (emp_id,))
-            conn.commit()
-    flash("Employee deleted!", "success")
+            cursor.execute("SELECT * FROM employees WHERE empId = ?", (emp_id,))
+            employee = cursor.fetchone()
+            if employee:
+                old_values = dict(employee)
+                cursor.execute("DELETE FROM employees WHERE empId = ?", (emp_id,))
+                conn.commit()
+                
+                # Log the deletion
+                description = f"Deleted employee {employee['empName']} (ID: {emp_id})"
+                log_change('employees', 'DELETE', emp_id, description, old_values=old_values)
+                
+                flash("Employee deleted!", "success")
+            else:
+                flash("Employee not found!", "danger")
     return redirect(url_for('employees'))
 
 @app.route('/leads', methods=['GET'])
@@ -430,6 +529,20 @@ def add_lead():
 
                 conn.commit()
 
+        # Log the insertion
+        new_values = {
+            'employeeLeadId': lead_id,
+            'employeeId': form['employeeId'],
+            'customerId': form['customerId'],
+            'status': form['status'],
+            'source': customer['source'],
+            'currentAddress': customer['currentLocation'],
+            'desiredDestination': customer['desiredDestination'],
+            'amountClosed': amount_closed if form['status'] == 'Confirmed' else 0
+        }
+        description = f"Added lead {lead_id} for employee {employee['empName']} and customer {customer['customerName']}"
+        log_change('leads', 'INSERT', lead_id, description, new_values=new_values)
+
         flash("Lead added successfully!", "success")
         return redirect(url_for('leads'))
 
@@ -456,6 +569,8 @@ def edit_lead(lead_id):
         new_status = form['status']
         amount_closed = float(form.get('amountClosed', 0))
         prev_amount = float(lead['amountClosed'] or 0)
+
+        old_values = dict(lead)
 
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
@@ -535,6 +650,19 @@ def edit_lead(lead_id):
 
                 conn.commit()
 
+        # Log the update
+        new_values = {
+            'employeeId': new_emp_id,
+            'customerId': new_cust_id,
+            'status': new_status,
+            'currentAddress': form['currentAddress'],
+            'desiredDestination': form['desiredDestination'],
+            'amountClosed': amount_closed if new_status == 'Confirmed' else 0
+        }
+        changes = [f"{key} from '{old_values[key]}' to '{new_values[key]}'" for key in new_values if old_values[key] != new_values[key]]
+        description = f"Updated lead {lead_id}: {', '.join(changes)}" if changes else f"No changes to lead {lead_id}"
+        log_change('leads', 'UPDATE', lead_id, description, old_values=old_values, new_values=new_values)
+
         flash("Lead and linked customer/employee updated!", "info")
         return redirect(url_for('leads'))
 
@@ -547,9 +675,20 @@ def edit_lead(lead_id):
 def delete_lead(lead_id):
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
-            cursor.execute("DELETE FROM leads WHERE employeeLeadId = ?", (lead_id,))
-            conn.commit()
-    flash("Lead deleted!", "success")
+            cursor.execute("SELECT * FROM leads WHERE employeeLeadId = ?", (lead_id,))
+            lead = cursor.fetchone()
+            if lead:
+                old_values = dict(lead)
+                cursor.execute("DELETE FROM leads WHERE employeeLeadId = ?", (lead_id,))
+                conn.commit()
+                
+                # Log the deletion
+                description = f"Deleted lead {lead_id}"
+                log_change('leads', 'DELETE', lead_id, description, old_values=old_values)
+                
+                flash("Lead deleted!", "success")
+            else:
+                flash("Lead not found!", "danger")
     return redirect(url_for('leads'))
 
 @app.route("/leads/create", methods=["GET", "POST"])
@@ -558,6 +697,14 @@ def create_lead():
     customers = get_all_customers()
 
     if request.method == "POST":
+        form = request.form
+        new_values = {
+            'employeeId': form["employeeId"],
+            'customerId': form["customerId"],
+            'status': form["status"],
+            'currentAddress': form["currentAddress"],
+            'desiredDestination': form["desiredDestination"]
+        }
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
                 cursor.execute("""
@@ -566,17 +713,84 @@ def create_lead():
                         desiredDestination, createdAt, updatedAt
                     ) VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
                 """, (
-                    request.form["employeeId"],
-                    request.form["customerId"],
-                    request.form["status"],
-                    request.form["currentAddress"],
-                    request.form["desiredDestination"]
+                    form["employeeId"],
+                    form["customerId"],
+                    form["status"],
+                    form["currentAddress"],
+                    form["desiredDestination"]
                 ))
                 conn.commit()
+        
+        # Log the insertion
+        lead_id = cursor.lastrowid  # Note: Assuming employee_leads has an auto-increment ID; adjust if needed
+        description = f"Created lead for employee {form['employeeId']} and customer {form['customerId']}"
+        log_change('employee_leads', 'INSERT', lead_id, description, new_values=new_values)
+        
         flash("Lead created successfully!")
         return redirect(url_for('leads'))
 
     return render_template("create_lead.html", employees=employees, customers=customers)
+@app.route('/status_tracking', methods=['GET'])
+def status_tracking():
+    # Get filters from request
+    filters = {
+        'employee_id': request.args.get('employee_id', ''),
+        'start_date': request.args.get('start_date', ''),
+        'end_date': request.args.get('end_date', '')
+    }
+    
+    # Build query for status changes
+    query = """
+        SELECT 
+            strftime('%Y-%m-%d', created_at) AS date,
+            json_extract(new_values, '$.status') AS new_status,
+            COUNT(*) AS status_count
+        FROM logs
+        WHERE table_name = 'leads'
+          AND action = 'UPDATE'
+          AND json_extract(new_values, '$.status') IS NOT NULL
+    """
+    params = []
+    
+    if filters['employee_id']:
+        query += " AND changed_by = ?"
+        params.append(filters['employee_id'])
+    
+    if filters['start_date']:
+        query += " AND DATE(created_at) >= ?"
+        params.append(filters['start_date'])
+    
+    if filters['end_date']:
+        query += " AND DATE(created_at) <= ?"
+        params.append(filters['end_date'])
+    
+    query += " GROUP BY date, new_status ORDER BY date"
+    
+    # Execute query
+    with closing(get_db_connection()) as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        status_data = cursor.fetchall()
+        
+        # Get employees for dropdown
+        cursor.execute("SELECT empId, empName FROM employees")
+        employees = cursor.fetchall()
+    
+    # Prepare data for chart
+    chart_data = {}
+    for row in status_data:
+        date = row['date']
+        status = row['new_status']
+        count = row['status_count']
+        
+        if date not in chart_data:
+            chart_data[date] = {}
+        chart_data[date][status] = count
+    
+    return render_template('status_tracking.html',
+                          chart_data=chart_data,
+                          employees=employees,
+                          filters=filters)
 
 @app.route('/dashboard')
 def dashboard():
@@ -610,6 +824,50 @@ def dashboard():
                          total_customers=total_customers,
                          total_employees=total_employees,
                          total_leads=total_leads)
+
+@app.route('/logs', methods=['GET'])
+def logs():
+    filters = {
+        'table_name': request.args.get('table_name', ''),
+        'action': request.args.get('action', ''),
+        'start_date': request.args.get('start_date', ''),
+        'end_date': request.args.get('end_date', '')
+    }
+    
+    query = "SELECT * FROM logs WHERE 1=1"
+    params = []
+    
+    if filters['table_name']:
+        query += " AND table_name = ?"
+        params.append(filters['table_name'])
+    if filters['action']:
+        query += " AND action = ?"
+        params.append(filters['action'])
+    if filters['start_date']:
+        query += " AND DATE(created_at) >= ?"
+        params.append(filters['start_date'])
+    if filters['end_date']:
+        query += " AND DATE(created_at) <= ?"
+        params.append(filters['end_date'])
+    
+    query += " ORDER BY created_at DESC"
+    
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute(query, params)
+            logs = cursor.fetchall()
+            
+            # Get distinct values for filters
+            cursor.execute("SELECT DISTINCT table_name FROM logs")
+            table_names = [row['table_name'] for row in cursor.fetchall()]
+            cursor.execute("SELECT DISTINCT action FROM logs")
+            actions = [row['action'] for row in cursor.fetchall()]
+    
+    return render_template('logs.html',
+                         logs=logs,
+                         filters=filters,
+                         table_names=table_names,
+                         actions=actions)
 
 if __name__ == '__main__':
     app.run(debug=True)

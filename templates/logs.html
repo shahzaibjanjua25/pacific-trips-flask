@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 class="page-title">📜 Database Change Logs</h2>
+
+<!-- Filter Form -->
+<div class="filter-card">
+    <form method="GET" class="filter-form">
+        <div class="form-group">
+            <label for="table_name">Table:</label>
+            <select name="table_name" id="table_name">
+                <option value="">All Tables</option>
+                {% for table in table_names %}
+                <option value="{{ table }}" {% if filters.table_name == table %}selected{% endif %}>{{ table }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="action">Action:</label>
+            <select name="action" id="action">
+                <option value="">All Actions</option>
+                {% for action in actions %}
+                <option value="{{ action }}" {% if filters.action == action %}selected{% endif %}>{{ action }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="start_date">Start Date:</label>
+            <input type="date" name="start_date" value="{{ filters.start_date }}">
+        </div>
+
+        <div class="form-group">
+            <label for="end_date">End Date:</label>
+            <input type="date" name="end_date" value="{{ filters.end_date }}">
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn">🔍 Filter</button>
+            <a href="{{ url_for('logs') }}" class="btn secondary">✖ Clear</a>
+        </div>
+    </form>
+</div>
+
+<!-- Logs Table -->
+<div class="table-wrapper">
+    <table class="logs-table">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Table</th>
+                <th>Action</th>
+                <th>Record ID</th>
+                <th>Description</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.created_at }}</td>
+                <td>{{ log.table_name }}</td>
+                <td><span class="badge badge-{{ log.action|lower }}">{{ log.action }}</span></td>
+                <td>{{ log.record_id }}</td>
+                <td>{{ log.description }}</td>
+                <td>
+                    {% if log.old_values %}
+                    <details>
+                        <summary>Old Values</summary>
+                        <pre>{{ log.old_values }}</pre>
+                    </details>
+                    {% endif %}
+                    {% if log.new_values %}
+                    <details>
+                        <summary>New Values</summary>
+                        <pre>{{ log.new_values }}</pre>
+                    </details>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+/* Global Style */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.page-title {
+    margin-bottom: 20px;
+    font-size: 24px;
+    color: #333;
+}
+
+/* Filter Card */
+.filter-card {
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    padding: 20px;
+    border-radius: 6px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+.filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+}
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+.form-group label {
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+.form-group select,
+.form-group input {
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    min-width: 160px;
+}
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+.btn {
+    padding: 7px 15px;
+    border: none;
+    border-radius: 4px;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+.btn:hover {
+    background-color: #0056b3;
+}
+.btn.secondary {
+    background-color: #6c757d;
+}
+.btn.secondary:hover {
+    background-color: #545b62;
+}
+
+/* Table Style */
+.table-wrapper {
+    overflow-x: auto;
+}
+.logs-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+.logs-table th, .logs-table td {
+    border: 1px solid #dee2e6;
+    padding: 10px;
+    text-align: left;
+}
+.logs-table th {
+    background-color: #115ba5;
+    font-weight: bold;
+}
+.logs-table tbody tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* Details & Pre */
+details summary {
+    cursor: pointer;
+    color: #007bff;
+    font-weight: 500;
+}
+pre {
+    background-color: #f0f2f5;
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    margin-top: 8px;
+    font-size: 14px;
+}
+
+/* Action Badge */
+.badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: white;
+    font-size: 0.85em;
+    text-transform: uppercase;
+}
+.badge-insert {
+    background-color: #28a745;
+}
+.badge-update {
+    background-color: #ffc107;
+    color: black;
+}
+.badge-delete {
+    background-color: #dc3545;
+}
+</style>
+{% endblock %}

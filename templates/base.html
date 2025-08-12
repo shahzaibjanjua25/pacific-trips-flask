@@ -44,7 +44,14 @@
                         Dashboard
                     </a>
                 </li>
-
+                <!-- NEW LOGS LINK -->
+                <li>
+                    <a href="{{ url_for('logs') }}"
+                        class="{% if request.endpoint == 'logs' %}active{% endif %}">
+                        Logs
+                    </a>
+                </li>
+            
             </ul>
         </nav>
 
