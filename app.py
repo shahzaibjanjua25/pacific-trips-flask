@@ -149,7 +149,7 @@ def create_matplotlib_chart(chart_data):
     
     plt.tight_layout()
     return fig
-def get_filtered_sorted_leads(employee_id, customer_id, status, start_date, end_date, sort_by, sort_order):
+def get_filtered_sorted_leads(employee_id, customer_id, status, start_date, source, end_date, sort_by, sort_order):
     query = '''
         SELECT leads.*, 
                customers.customerName AS cust_name, 
@@ -170,6 +170,9 @@ def get_filtered_sorted_leads(employee_id, customer_id, status, start_date, end_
     if status:
         query += ' AND leads.status = ?'
         params.append(status)
+    if source:
+        query += ' AND leads.source = ?'
+        params.append(source)
     if start_date:
         query += ' AND DATE(leads.createdAt) >= ?'
         params.append(start_date)
@@ -271,135 +274,7 @@ def customers():
                          sort_by=sort_by,
                          sort_order=sort_order,
                          column_values=column_values)
-@app.route('/status_changes')
-def status_changes():
-    """Display lead status changes with pie chart visualization."""
-    # Get filters from request
-    filters = {
-        'employee_id': request.args.get('employee_id', ''),
-        'start_date': request.args.get('start_date', ''),
-        'end_date': request.args.get('end_date', ''),
-        'status': request.args.get('status', '')
-    }
-    
-    # Build query for status changes
-    query = """
-        SELECT 
-            json_extract(new_values, '$.status') AS status,
-            COALESCE(lead_employee, changed_by) AS employee_id,
-            COUNT(*) AS status_count
-        FROM logs
-        WHERE table_name = 'leads'
-          AND action = 'UPDATE'
-          AND json_extract(new_values, '$.status') IS NOT NULL
-    """
-    params = []
-    
-    if filters['employee_id']:
-        query += " AND (lead_employee = ? OR changed_by = ?)"
-        params.extend([filters['employee_id'], filters['employee_id']])
-    
-    if filters['status']:
-        query += " AND json_extract(new_values, '$.status') = ?"
-        params.append(filters['status'])
-    
-    if filters['start_date']:
-        query += " AND DATE(created_at) >= ?"
-        params.append(filters['start_date'])
-    
-    if filters['end_date']:
-        query += " AND DATE(created_at) <= ?"
-        params.append(filters['end_date'])
-    
-    query += " GROUP BY status, employee_id"
-    
-    # Execute query
-    with closing(get_db_connection()) as conn:
-        cursor = conn.cursor()
-        cursor.execute(query, params)
-        status_data = cursor.fetchall()
-        
-        # Get employee names mapping
-        cursor.execute("SELECT empId, empName FROM employees")
-        employee_names = {row['empId']: row['empName'] for row in cursor.fetchall()}
-        
-        # Get unique statuses for dropdown
-        cursor.execute("SELECT DISTINCT status FROM leads")
-        statuses = [row['status'] for row in cursor.fetchall() if row['status']]
-    
-    # Prepare data structures
-    status_counts = defaultdict(int)
-    employee_status_counts = defaultdict(lambda: {'name': '', 'statuses': defaultdict(int)})
-    
-    for row in status_data:
-        status = row['status']
-        employee_id = row['employee_id']
-        count = row['status_count']
-        
-        # Update status counts
-        status_counts[status] += count
-        
-        # Update employee-specific counts
-        if employee_id in employee_names:
-            employee_status_counts[employee_id]['name'] = employee_names[employee_id]
-            employee_status_counts[employee_id]['statuses'][status] += count
-    
-    # Convert defaultdicts to regular dicts for template
-    status_counts = dict(status_counts)
-    employee_status_counts = dict(employee_status_counts)
-    
-    # Generate visualization (using Plotly)
-    def generate_pie_chart(status_data):
-        """Generate Plotly pie chart from status data."""
-        if not status_data:
-            return "<div class='no-data'>No status changes found for the selected filters</div>"
-            
-        import plotly.graph_objects as go
-        
-        # Status colors mapping
-        status_colors = {
-            'New': '#3498db',
-            'Contacted': '#f1c40f',
-            'Qualified': '#2ecc71',
-            'Proposal Sent': '#e67e22',
-            'Negotiation': '#9b59b6',
-            'Confirmed': '#27ae60',
-            'Lost': '#e74c3c',
-            'On Hold': '#95a5a6'
-        }
-        
-        labels = list(status_data.keys())
-        values = list(status_data.values())
-        colors = [status_colors.get(status, '#95a5a6') for status in labels]
-        
-        fig = go.Figure(data=[go.Pie(
-            labels=labels,
-            values=values,
-            marker_colors=colors,
-            hole=0.3,
-            textinfo='percent+label',
-            hoverinfo='label+value+percent',
-            textposition='inside'
-        )])
-        
-        fig.update_layout(
-            title='Status Distribution',
-            height=500,
-            showlegend=False
-        )
-        
-        return fig.to_html(full_html=False)
-    
-    # Generate the chart HTML
-    chart_html = generate_pie_chart(status_counts)
-    
-    return render_template('status_changes_pie.html',
-                         chart_html=chart_html,
-                         employees=list(employee_names.items()),
-                         statuses=statuses,
-                         filters=filters,
-                         status_counts=status_counts,
-                         employee_status_counts=employee_status_counts)
+
 
 @app.route('/add_customer', methods=['GET', 'POST'])
 def add_customer():
@@ -689,6 +564,7 @@ def leads():
         "employeeId": request.args.get('employeeId', ''),
         "customerId": request.args.get('customerId', ''),
         "status": request.args.get('status', ''),
+        "source": request.args.get('source', ''),
         "start_date": request.args.get('start_date', ''),
         "end_date": request.args.get('end_date', '')
     }
@@ -700,6 +576,7 @@ def leads():
         filters["employeeId"],
         filters["customerId"],
         filters["status"],
+        filters["source"],
         filters["start_date"],
         filters["end_date"],
         sort_by,
@@ -827,6 +704,7 @@ def edit_lead(lead_id):
         new_emp_id = form['employeeId']
         new_cust_id = form['customerId']
         new_status = form['status']
+        new_source = form['source']
         amount_closed = float(form.get('amountClosed', 0))
         prev_amount = float(lead['amountClosed'] or 0)
 
@@ -882,7 +760,7 @@ def edit_lead(lead_id):
                     UPDATE leads
                     SET employeeId = ?, employeeName = ?, employeeContactNo = ?,
                         customerId = ?, customerName = ?, customerContactNo = ?,
-                        currentAddress = ?, desiredDestination = ?,
+                        currentAddress = ?, desiredDestination = ?, source=?,
                         status = ?, 
                         amountClosed = ?, updatedAt = datetime('now')
                     WHERE employeeLeadId = ?
@@ -895,6 +773,7 @@ def edit_lead(lead_id):
                     new_cust['phone'] if new_cust else lead['customerContactNo'],
                     form['currentAddress'],
                     form['desiredDestination'],
+                    new_source,
                     new_status,
                     amount_closed if new_status == 'Confirmed' else 0,
                     lead_id
@@ -905,11 +784,13 @@ def edit_lead(lead_id):
                     cursor.execute("""
                         UPDATE customers
                         SET status = ?,
+                            source = ?,
                             currentLocation = ?,
                             desiredDestination = ?
                         WHERE customerId = ?
                     """, (
                         new_status,
+                        new_source,
                         form['currentAddress'],
                         form['desiredDestination'],
                         new_cust_id
@@ -925,6 +806,7 @@ def edit_lead(lead_id):
             'employeeId': new_emp_id,
             'customerId': new_cust_id,
             'status': new_status,
+            'source': new_source,
             'currentAddress': form['currentAddress'],
             'desiredDestination': form['desiredDestination'],
             'amountClosed': amount_closed if new_status == 'Confirmed' else 0
@@ -1001,6 +883,7 @@ def create_lead():
             'employeeId': form["employeeId"],
             'customerId': form["customerId"],
             'status': form["status"],
+            'source': form["source"],
             'currentAddress': form["currentAddress"],
             'desiredDestination': form["desiredDestination"]
         }
@@ -1009,12 +892,13 @@ def create_lead():
                 cursor.execute("""
                     INSERT INTO employee_leads (
                         employeeId, customerId, status, currentAddress, 
-                        desiredDestination, createdAt, updatedAt
+                        desiredDestination,source, createdAt, updatedAt
                     ) VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
                 """, (
                     form["employeeId"],
                     form["customerId"],
                     form["status"],
+                    form["source"],
                     form["currentAddress"],
                     form["desiredDestination"]
                 ))
@@ -1037,8 +921,8 @@ def status_tracking():
         'start_date': request.args.get('start_date', ''),
         'end_date': request.args.get('end_date', '')
     }
-    
-    # Build query for status changes
+
+    # Build query for actual status changes (status before != status after)
     query = """
         SELECT 
             strftime('%Y-%m-%d', created_at) AS date,
@@ -1047,60 +931,188 @@ def status_tracking():
         FROM logs
         WHERE table_name = 'leads'
           AND action = 'UPDATE'
-          AND json_extract(new_values, '$.status') IS NOT NULL
+          AND json_extract(new_values, '$.status') IS NOT json_extract(old_values, '$.status')
     """
     params = []
-    
+
     if filters['employee_id']:
         query += " AND changed_by = ?"
         params.append(filters['employee_id'])
-    
+
     if filters['start_date']:
         query += " AND DATE(created_at) >= ?"
         params.append(filters['start_date'])
-    
+
     if filters['end_date']:
         query += " AND DATE(created_at) <= ?"
         params.append(filters['end_date'])
-    
+
     query += " GROUP BY date, new_status ORDER BY date"
-    
+
     # Execute query
     with closing(get_db_connection()) as conn:
         cursor = conn.cursor()
         cursor.execute(query, params)
         status_data = cursor.fetchall()
-        
+
         # Get employees for dropdown
         cursor.execute("SELECT empId, empName FROM employees")
         employees = cursor.fetchall()
-    
+
     # Prepare data for chart
     chart_data = {}
     for row in status_data:
         date = row['date']
         status = row['new_status']
         count = row['status_count']
-        
+
         if date not in chart_data:
             chart_data[date] = {}
         chart_data[date][status] = count
-    
+
     return render_template('status_tracking.html',
-                          chart_data=chart_data,
-                          employees=employees,
-                          filters=filters)
+                           chart_data=chart_data,
+                           employees=employees,
+                           filters=filters)
+
+@app.route('/status_changes')
+def status_changes():
+    """Display lead status changes with pie chart visualization."""
+    # Get filters from request
+    filters = {
+        'employee_id': request.args.get('employee_id', ''),
+        'start_date': request.args.get('start_date', ''),
+        'end_date': request.args.get('end_date', ''),
+        'status': request.args.get('status', '')
+    }
+
+    # Build query for actual status changes only
+    query = """
+        SELECT 
+            json_extract(new_values, '$.status') AS status,
+            COALESCE(lead_employee, changed_by) AS employee_id,
+            COUNT(*) AS status_count
+        FROM logs
+        WHERE table_name = 'leads'
+          AND action = 'UPDATE'
+          AND json_extract(new_values, '$.status') IS NOT json_extract(old_values, '$.status')
+    """
+    params = []
+
+    if filters['employee_id']:
+        query += " AND (lead_employee = ? OR changed_by = ?)"
+        params.extend([filters['employee_id'], filters['employee_id']])
+
+    if filters['status']:
+        query += " AND json_extract(new_values, '$.status') = ?"
+        params.append(filters['status'])
+
+    if filters['start_date']:
+        query += " AND DATE(created_at) >= ?"
+        params.append(filters['start_date'])
+
+    if filters['end_date']:
+        query += " AND DATE(created_at) <= ?"
+        params.append(filters['end_date'])
+
+    query += " GROUP BY status, employee_id"
+
+    # Execute query
+    with closing(get_db_connection()) as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        status_data = cursor.fetchall()
+
+        # Get employee names mapping
+        cursor.execute("SELECT empId, empName FROM employees")
+        employee_names = {row['empId']: row['empName'] for row in cursor.fetchall()}
+
+        # Get unique statuses for dropdown
+        cursor.execute("SELECT DISTINCT status FROM leads")
+        statuses = [row['status'] for row in cursor.fetchall() if row['status']]
+
+    # Prepare data structures
+    from collections import defaultdict
+    status_counts = defaultdict(int)
+    employee_status_counts = defaultdict(lambda: {'name': '', 'statuses': defaultdict(int)})
+
+    for row in status_data:
+        status = row['status']
+        employee_id = row['employee_id']
+        count = row['status_count']
+
+        status_counts[status] += count
+
+        if employee_id in employee_names:
+            employee_status_counts[employee_id]['name'] = employee_names[employee_id]
+            employee_status_counts[employee_id]['statuses'][status] += count
+
+    status_counts = dict(status_counts)
+    employee_status_counts = dict(employee_status_counts)
+
+    # Generate pie chart
+    def generate_pie_chart(status_data):
+        if not status_data:
+            return "<div class='no-data'>No status changes found for the selected filters</div>"
+
+        import plotly.graph_objects as go
+
+        status_colors = {
+            'New': '#3498db',
+            'Contacted': '#f1c40f',
+            'Qualified': '#2ecc71',
+            'Proposal Sent': '#e67e22',
+            'Negotiation': '#9b59b6',
+            'Confirmed': '#27ae60',
+            'Lost': '#e74c3c',
+            'On Hold': '#95a5a6'
+        }
+
+        labels = list(status_data.keys())
+        values = list(status_data.values())
+        colors = [status_colors.get(status, '#95a5a6') for status in labels]
+
+        fig = go.Figure(data=[go.Pie(
+            labels=labels,
+            values=values,
+            marker_colors=colors,
+            hole=0.3,
+            textinfo='percent+label',
+            hoverinfo='label+value+percent',
+            textposition='inside'
+        )])
+
+        fig.update_layout(
+            title='Status Distribution',
+            height=500,
+            showlegend=False
+        )
+
+        return fig.to_html(full_html=False)
+
+    chart_html = generate_pie_chart(status_counts)
+
+    return render_template('status_changes_pie.html',
+                           chart_html=chart_html,
+                           employees=list(employee_names.items()),
+                           statuses=statuses,
+                           filters=filters,
+                           status_counts=status_counts,
+                           employee_status_counts=employee_status_counts)
 
 @app.route('/dashboard')
 def dashboard():
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
+            # Leads by Status
             cursor.execute('SELECT status, COUNT(*) as count FROM leads GROUP BY status')
             leads_by_status = [dict(row) for row in cursor.fetchall()]
             
-            cursor.execute('SELECT COUNT(*) as count FROM leads GROUP BY status')
+            # Leads by Source (corrected query)
+            cursor.execute('SELECT source, COUNT(*) as count FROM leads GROUP BY source')
             leads_by_source = [dict(row) for row in cursor.fetchall()]
             
+            # Leads by Date (optional)
             cursor.execute('''
                 SELECT DATE(createdAt) as date, COUNT(*) as count 
                 FROM leads 
@@ -1109,6 +1121,7 @@ def dashboard():
             ''')
             leads_by_date = [dict(row) for row in cursor.fetchall()]
             
+            # Total counts
             cursor.execute('SELECT COUNT(*) FROM customers')
             total_customers = cursor.fetchone()[0]
             cursor.execute('SELECT COUNT(*) FROM employees')
@@ -1123,7 +1136,6 @@ def dashboard():
                          total_customers=total_customers,
                          total_employees=total_employees,
                          total_leads=total_leads)
-
 @app.route('/logs', methods=['GET'])
 def logs():
     filters = {
@@ -1142,6 +1154,9 @@ def logs():
     if filters['action']:
         query += " AND action = ?"
         params.append(filters['action'])
+    if filters['source']:
+        query += " AND changed_by = ?"
+        params.append(filters['source'])
     if filters['start_date']:
         query += " AND DATE(created_at) >= ?"
         params.append(filters['start_date'])

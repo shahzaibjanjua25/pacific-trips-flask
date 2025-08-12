@@ -51,7 +51,7 @@
 
     <label>Sort By:
         <select name="sort_by">
-            {% for col in ['employeeLeadId', 'employeeId', 'empName', 'customerId', 'customerName', 'status', 'currentAddress', 'desiredDestination', 'createdAt', 'updatedAt'] %}
+            {% for col in ['employeeLeadId', 'employeeId', 'empName', 'customerId', 'customerName', 'status', 'currentAddress', 'desiredDestination', 'source','createdAt', 'updatedAt'] %}
             <option value="{{ col }}" {% if sort_by == col %}selected{% endif %}>{{ col }}</option>
             {% endfor %}
         </select>
@@ -78,6 +78,7 @@
             <th>Status</th>
             <th>Current Address</th>
             <th>Destination</th>
+            <th>Source</th>
             <th>Created</th>
             <th>Updated</th>
             <th>Actions</th>
@@ -92,7 +93,7 @@
             <td>{{ lead.status }}</td>
             <td>{{ lead.currentAddress }}</td>
             <td>{{ lead.desiredDestination }}</td>
-            <!-- <td>{{ lead.dateSource or '' }}</td> -->
+            <td>{{ lead.source }}</td>
             <td>{{ lead.createdAt }}</td>
             <td>{{ lead.updatedAt }}</td>
             <td>

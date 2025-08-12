@@ -1,216 +1,273 @@
 {% extends "base.html" %}
-
 {% block content %}
 <h2 class="dashboard-title">📊 Dashboard</h2>
 
-<div class="dashboard-charts">
-    <div class="chart-box">
-        <h3>Pie Chart – Leads by Status</h3>
-        <div class="chart-wrapper">
-            <canvas id="pieChart"></canvas>
-        </div>
+<div class="dashboard-stats">
+    <div class="stat-card">
+        <h3>Total Leads</h3>
+        <p>{{ total_leads }}</p>
     </div>
-
-    <div class="chart-box">
-        <h3>Bar Chart – Leads by Source</h3>
-        <div class="chart-wrapper">
-            <canvas id="barChart"></canvas>
-        </div>
+    <div class="stat-card">
+        <h3>Total Customers</h3>
+        <p>{{ total_customers }}</p>
     </div>
-
-    <div class="chart-box">
-        <h3>Line Chart – Leads Over Time</h3>
-        <div class="chart-wrapper">
-            <canvas id="lineChart"></canvas>
-        </div>
-    </div>
-
-    <div class="chart-box">
-        <h3>Doughnut Chart – Entity Breakdown</h3>
-        <div class="chart-wrapper">
-            <canvas id="doughnutChart"></canvas>
-        </div>
-    </div>
-
-    <div class="chart-box">
-        <h3>Radar Chart – Status Breakdown</h3>
-        <div class="chart-wrapper">
-            <canvas id="radarChart"></canvas>
-        </div>
-    </div>
-
-    <div class="chart-box">
-        <h3>Polar Area Chart – Leads by Source</h3>
-        <div class="chart-wrapper">
-            <canvas id="polarChart"></canvas>
-        </div>
+    <div class="stat-card">
+        <h3>Total Employees</h3>
+        <p>{{ total_employees }}</p>
     </div>
 </div>
 
-<style>
-.dashboard-title {
-    text-align: center;
-    margin: 30px 0;
-    font-size: 32px;
-    font-weight: 700;
-}
-
-.dashboard-charts {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 30px;
-    padding: 20px;
-}
-
-.chart-box {
-    flex: 1 1 500px;
-    max-width: 600px;
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.chart-box h3 {
-    text-align: center;
-    margin-bottom: 15px;
-    font-size: 20px;
-}
-
-.chart-wrapper {
-    position: relative;
-    width: 100%;
-    height: 400px;
-}
-
-@media (max-width: 768px) {
-    .chart-wrapper {
-        height: 300px;
-    }
-}
-</style>
+<div class="dashboard-charts">
+    <div class="chart-container">
+        <h3>Leads by Status</h3>
+        <canvas id="pieChart"></canvas>
+    </div>
+    <div class="chart-container">
+        <h3>Leads by Source</h3>
+        <canvas id="barChart"></canvas>
+    </div>
+    <div class="chart-container">
+        <h3>Entity Breakdown</h3>
+        <canvas id="doughnutChart"></canvas>
+    </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const leadsByStatus = {{ leads_by_status|tojson }};
-    const leadsBySource = {{ leads_by_source|tojson }};
-    const leadsByDate = {{ leads_by_date|tojson }};
-    const totalCustomers = {{ total_customers }};
-    const totalEmployees = {{ total_employees }};
-    const totalLeads = {{ total_leads }};
+    // Debug data
+    console.log("Leads by Status:", {{ leads_by_status|tojson }});
+    console.log("Leads by Source:", {{ leads_by_source|tojson }});
+    console.log("Total Customers:", {{ total_customers }});
+    console.log("Total Employees:", {{ total_employees }});
+    console.log("Total Leads:", {{ total_leads }});
 
+    // Data processing with fallbacks
+    const leadsByStatus = {{ leads_by_status|tojson|safe }} || [];
+    const leadsBySource = {{ leads_by_source|tojson|safe }} || [];
+    const totalCustomers = {{ total_customers|default(0) }};
+    const totalEmployees = {{ total_employees|default(0) }};
+    const totalLeads = {{ total_leads|default(0) }};
+
+    // Common chart configuration
     const chartOptions = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
             legend: {
+                position: 'right',
                 labels: {
-                    font: { size: 14 }
+                    font: {
+                        size: 14
+                    },
+                    padding: 20
                 }
             },
-            title: {
-                display: false
-            }
-        },
-        scales: {
-            x: {
-                ticks: {
-                    font: { size: 12 }
-                }
-            },
-            y: {
-                ticks: {
-                    font: { size: 12 }
+            tooltip: {
+                bodyFont: {
+                    size: 14
+                },
+                titleFont: {
+                    size: 16
                 }
             }
         }
     };
 
-    new Chart(document.getElementById('pieChart'), {
-        type: 'pie',
-        data: {
-            labels: leadsByStatus.map(r => r.status),
-            datasets: [{
-                label: 'Leads by Status',
-                data: leadsByStatus.map(r => r.count),
-                backgroundColor: [
-                    '#3498db', '#f1c40f', '#2ecc71', '#e67e22', '#9b59b6', '#27ae60', '#e74c3c', '#95a5a6'
-                ]
-            }]
-        },
-        options: chartOptions
-    });
+    // Generate random colors
+    function getRandomColors(count) {
+        const colors = [];
+        for (let i = 0; i < count; i++) {
+            colors.push(`hsl(${Math.random() * 360}, 70%, 60%)`);
+        }
+        return colors;
+    }
 
-    new Chart(document.getElementById('barChart'), {
-        type: 'bar',
-        data: {
-            labels: leadsBySource.map(r => r.source),
-            datasets: [{
-                label: 'Leads by Source',
-                data: leadsBySource.map(r => r.count),
-                backgroundColor: '#4e73df'
-            }]
-        },
-        options: chartOptions
-    });
+    // Pie Chart - Leads by Status
+    if (leadsByStatus.length > 0) {
+        new Chart(document.getElementById('pieChart'), {
+            type: 'pie',
+            data: {
+                labels: leadsByStatus.map(r => r.status),
+                datasets: [{
+                    data: leadsByStatus.map(r => r.count),
+                    backgroundColor: getRandomColors(leadsByStatus.length),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                ...chartOptions,
+                plugins: {
+                    ...chartOptions.plugins,
+                    title: {
+                        display: true,
+                        text: 'Leads by Status',
+                        font: {
+                            size: 18
+                        }
+                    }
+                }
+            }
+        });
+    } else {
+        document.getElementById('pieChart').parentElement.innerHTML += 
+            '<p class="no-data">No status data available</p>';
+    }
 
-    new Chart(document.getElementById('lineChart'), {
-        type: 'line',
-        data: {
-            labels: leadsByDate.map(r => r.date),
-            datasets: [{
-                label: 'Leads Over Time',
-                data: leadsByDate.map(r => r.count),
-                borderColor: '#2ecc71',
-                fill: false,
-                tension: 0.3
-            }]
-        },
-        options: chartOptions
-    });
+    // Bar Chart - Leads by Source
+    if (leadsBySource.length > 0) {
+        new Chart(document.getElementById('barChart'), {
+            type: 'bar',
+            data: {
+                labels: leadsBySource.map(r => r.source),
+                datasets: [{
+                    label: 'Leads',
+                    data: leadsBySource.map(r => r.count),
+                    backgroundColor: getRandomColors(leadsBySource.length),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                ...chartOptions,
+                plugins: {
+                    ...chartOptions.plugins,
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Leads by Source',
+                        font: {
+                            size: 18
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    } else {
+        document.getElementById('barChart').parentElement.innerHTML += 
+            '<p class="no-data">No source data available</p>';
+    }
 
-    new Chart(document.getElementById('doughnutChart'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Customers', 'Employees', 'Leads'],
-            datasets: [{
-                label: 'Entity Count',
-                data: [totalCustomers, totalEmployees, totalLeads],
-                backgroundColor: ['#1abc9c', '#e74c3c', '#9b59b6']
-            }]
-        },
-        options: chartOptions
-    });
-
-    new Chart(document.getElementById('radarChart'), {
-        type: 'radar',
-        data: {
-            labels: leadsByStatus.map(r => r.status),
-            datasets: [{
-                label: 'Leads by Status',
-                data: leadsByStatus.map(r => r.count),
-                backgroundColor: 'rgba(52, 152, 219, 0.2)',
-                borderColor: '#3498db',
-                pointBackgroundColor: '#3498db'
-            }]
-        },
-        options: chartOptions
-    });
-
-    new Chart(document.getElementById('polarChart'), {
-        type: 'polarArea',
-        data: {
-            labels: leadsBySource.map(r => r.source),
-            datasets: [{
-                label: 'Leads by Source',
-                data: leadsBySource.map(r => r.count),
-                backgroundColor: [
-                    '#f39c12', '#e67e22', '#1abc9c', '#9b59b6', '#e74c3c', '#2ecc71'
-                ]
-            }]
-        },
-        options: chartOptions
-    });
+    // Doughnut Chart - Entity Breakdown
+    if (totalCustomers > 0 || totalEmployees > 0 || totalLeads > 0) {
+        new Chart(document.getElementById('doughnutChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Customers', 'Employees', 'Leads'],
+                datasets: [{
+                    data: [totalCustomers, totalEmployees, totalLeads],
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(75, 192, 192, 0.7)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                ...chartOptions,
+                plugins: {
+                    ...chartOptions.plugins,
+                    title: {
+                        display: true,
+                        text: 'Entity Breakdown',
+                        font: {
+                            size: 18
+                        }
+                    }
+                }
+            }
+        });
+    } else {
+        document.getElementById('doughnutChart').parentElement.innerHTML += 
+            '<p class="no-data">No entity data available</p>';
+    }
 </script>
+
+<style>
+    .dashboard-title {
+        text-align: center;
+        margin: 30px 0;
+        color: #2c3e50;
+    }
+
+    .dashboard-stats {
+        display: flex;
+        justify-content: space-around;
+        margin: 30px 0;
+        flex-wrap: wrap;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        min-width: 200px;
+        margin: 10px;
+    }
+
+    .stat-card h3 {
+        margin-top: 0;
+        color: #7f8c8d;
+    }
+
+    .stat-card p {
+        font-size: 2.5em;
+        margin: 10px 0 0;
+        color: #2c3e50;
+    }
+
+    .dashboard-charts {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-around;
+        gap: 30px;
+        margin: 30px 0;
+    }
+
+    .chart-container {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        width: calc(33% - 40px);
+        min-width: 300px;
+        height: 400px;
+    }
+
+    .chart-container h3 {
+        text-align: center;
+        margin-top: 0;
+        color: #2c3e50;
+    }
+
+    .no-data {
+        text-align: center;
+        color: #7f8c8d;
+        font-style: italic;
+        margin-top: 50px;
+    }
+
+    @media (max-width: 1200px) {
+        .chart-container {
+            width: calc(50% - 40px);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .chart-container {
+            width: 100%;
+        }
+    }
+</style>
 {% endblock %}
