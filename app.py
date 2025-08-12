@@ -38,14 +38,12 @@ def generate_status_chart(chart_data):
     """
     # Status colors mapping
     status_colors = {
-        'New': '#3498db',
+        'Pending': '#3498db',
         'Contacted': '#f1c40f',
-        'Qualified': '#2ecc71',
-        'Proposal Sent': '#e67e22',
-        'Negotiation': '#9b59b6',
+        'Paid': '#9b59b6',
         'Confirmed': '#27ae60',
         'Lost': '#e74c3c',
-        'On Hold': '#95a5a6'
+        'Refund': '#95a5a6'
     }
 
     # Process the data similar to the JavaScript version
@@ -1028,8 +1026,16 @@ def status_changes():
         employee_names = {row['empId']: row['empName'] for row in cursor.fetchall()}
 
         # Get unique statuses for dropdown
-        cursor.execute("SELECT DISTINCT status FROM leads")
+        cursor.execute("""
+            SELECT DISTINCT json_extract(new_values, '$.status') AS status
+            FROM logs
+            WHERE table_name = 'leads'
+            AND action = 'UPDATE'
+            AND json_extract(new_values, '$.status') IS NOT json_extract(old_values, '$.status')
+            AND json_extract(new_values, '$.status') IS NOT NULL
+        """)
         statuses = [row['status'] for row in cursor.fetchall() if row['status']]
+
 
     # Prepare data structures
     from collections import defaultdict
@@ -1058,15 +1064,13 @@ def status_changes():
         import plotly.graph_objects as go
 
         status_colors = {
-            'New': '#3498db',
-            'Contacted': '#f1c40f',
-            'Qualified': '#2ecc71',
-            'Proposal Sent': '#e67e22',
-            'Negotiation': '#9b59b6',
-            'Confirmed': '#27ae60',
-            'Lost': '#e74c3c',
-            'On Hold': '#95a5a6'
-        }
+        'Pending': '#3498db',
+        'Contacted': '#f1c40f',
+        'Paid': '#9b59b6',
+        'Confirmed': '#27ae60',
+        'Lost': '#e74c3c',
+        'Refund': '#95a5a6'
+    }
 
         labels = list(status_data.keys())
         values = list(status_data.values())
