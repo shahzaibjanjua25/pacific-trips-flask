@@ -18,7 +18,8 @@
         <option value="{{ cust.customerId }}" 
                 data-current="{{ cust.currentLocation }}" 
                 data-destination="{{ cust.desiredDestination }}"
-                data-phone="{{ cust.phone }}">
+                data-phone="{{ cust.phone }}"
+                data-source="{{ cust.source }}">
             {{ cust.customerName }}
         </option>
         {% endfor %}
@@ -31,21 +32,10 @@
         {% endfor %}
     </select><br><br>
 
-    <label for="source">Source:</label>
-    <select name="source" required>
-        {% for s in ['Facebook', 'WhatsApp', 'Reference', 'TikTok', 'Other'] %}
-        <option value="{{ s }}">{{ s }}</option>
-        {% endfor %}
-    </select><br><br>
-
-    <label for="currentAddress">Current Address:</label>
-    <input type="text" name="currentAddress" id="currentAddress" required readonly><br><br>
-
-    <label for="desiredDestination">Desired Destination:</label>
-    <input type="text" name="desiredDestination" id="desiredDestination" required readonly><br><br>
-
-    <label for="dateSource">Date Source:</label>
-    <input type="date" name="dateSource"><br><br>
+    <!-- Hidden fields auto-filled from customer -->
+    <input type="hidden" name="source" id="source">
+    <input type="hidden" name="currentAddress" id="currentAddress">
+    <input type="hidden" name="desiredDestination" id="desiredDestination">
 
     <!-- Hidden field for amount -->
     <input type="hidden" id="amountClosed" name="amountClosed" value="0">
@@ -72,9 +62,11 @@ function updateCustomerDetails() {
     if (selectedOption.value) {
         document.getElementById('currentAddress').value = selectedOption.dataset.current;
         document.getElementById('desiredDestination').value = selectedOption.dataset.destination;
+        document.getElementById('source').value = selectedOption.dataset.source;
     } else {
         document.getElementById('currentAddress').value = '';
         document.getElementById('desiredDestination').value = '';
+        document.getElementById('source').value = '';
     }
 }
 
@@ -83,7 +75,6 @@ let previousStatus = '';
 function checkStatusChange() {
     const newStatus = document.getElementById('status').value;
     
-    // If changing to Confirmed
     if (newStatus === 'Confirmed') {
         showAmountModal('Enter the closed amount for this lead:');
     }
@@ -111,7 +102,6 @@ function confirmAmount() {
     }
 }
 
-// Close modal if clicked outside
 window.onclick = function(event) {
     const modal = document.getElementById('amountModal');
     if (event.target == modal) {
@@ -119,7 +109,6 @@ window.onclick = function(event) {
     }
 }
 
-// Initialize fields
 document.addEventListener('DOMContentLoaded', function() {
     updateCustomerDetails();
 });

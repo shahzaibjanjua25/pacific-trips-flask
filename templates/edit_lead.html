@@ -7,7 +7,8 @@
     <label for="employeeId">Employee:</label>
     <select name="employeeId" required>
         {% for emp in employees %}
-        <option value="{{ emp.empId }}" {% if emp.empId==lead.employeeId %}selected{% endif %}>{{ emp.empName }}
+        <option value="{{ emp.empId }}" {% if emp.empId==lead.employeeId %}selected{% endif %}>
+            {{ emp.empName }}
         </option>
         {% endfor %}
     </select><br><br>
@@ -15,8 +16,9 @@
     <label for="customerId">Customer:</label>
     <select name="customerId" required>
         {% for cust in customers %}
-        <option value="{{ cust.customerId }}" {% if cust.customerId==lead.customerId %}selected{% endif %}>{{
-            cust.customerName }}</option>
+        <option value="{{ cust.customerId }}" {% if cust.customerId==lead.customerId %}selected{% endif %}>
+            {{ cust.customerName }}
+        </option>
         {% endfor %}
     </select><br><br>
 
@@ -40,9 +42,6 @@
     <label for="desiredDestination">Desired Destination:</label>
     <input type="text" name="desiredDestination" value="{{ lead.desiredDestination }}" required><br><br>
 
-    <label for="dateSource">Date Source:</label>
-    <input type="date" name="dateSource" value="{{ lead.dateSource }}"><br><br>
-
     <!-- Hidden field for amount -->
     <input type="hidden" id="amountClosed" name="amountClosed" value="{{ lead.amountClosed or 0 }}">
 
@@ -61,18 +60,14 @@
 </div>
 
 <script>
-// Track previous status
 let previousStatus = "{{ lead.status }}";
 
 function checkStatusChange() {
     const newStatus = document.getElementById('status').value;
     
-    // If changing to Confirmed from another status
     if (newStatus === 'Confirmed' && previousStatus !== 'Confirmed') {
         showAmountModal('Enter the closed amount for this lead:');
-    } 
-    // If changing from Confirmed to another status
-    else if (previousStatus === 'Confirmed' && newStatus !== 'Confirmed') {
+    } else if (previousStatus === 'Confirmed' && newStatus !== 'Confirmed') {
         showAmountModal('Enter the amount to deduct (previously confirmed amount):');
     }
     
@@ -99,7 +94,6 @@ function confirmAmount() {
     }
 }
 
-// Close modal if clicked outside
 window.onclick = function(event) {
     const modal = document.getElementById('amountModal');
     if (event.target == modal) {
