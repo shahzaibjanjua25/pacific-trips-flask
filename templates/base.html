@@ -2,15 +2,8 @@
 <html lang="en">
 
 <head>
-     <meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pacific Trips Employee Management System</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='customers.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='employees.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='add form.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <title>Pacific Trips Employee Management System</title>
     <style>
         /* 🌐 Global Reset & Base Styles */
@@ -28,6 +21,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            font-size: 16px; /* Base font size for better readability */
         }
 
         body.sidebar-open {
@@ -94,7 +88,6 @@
             font-size: 0.95rem;
             font-weight: 500;
         }
-
         /* Buttons (Login/Logout/Register) */
         .btn-outline-primary {
             border-color: #007bff;
@@ -306,6 +299,20 @@
             box-shadow: 0 0 4px rgba(0, 123, 255, 0.3);
         }
 
+        /* Content Section */
+        .bg-light h1.display-5 {
+            font-size: 2.5rem;
+        }
+
+        .bg-light p.lead {
+            font-size: 1.25rem;
+        }
+
+        .btn-lg {
+            font-size: 1.25rem;
+            padding: 0.5rem 1rem;
+        }
+
         /* 🔚 Footer */
         .footer {
             background-color: #004e7c;
@@ -333,11 +340,11 @@
             }
 
             .navbar-brand {
-                font-size: 1.1rem;
+                font-size: 1.3rem; /* Increased for mobile */
             }
 
             .navbar-brand img.logo {
-                height: 28px;
+                height: 32px;
             }
 
             .header-right {
@@ -345,73 +352,112 @@
             }
 
             .btn-outline-primary {
-                padding: 0.3rem 0.75rem;
-                font-size: 0.85rem;
+                padding: 0.4rem 0.8rem;
+                font-size: 1rem; /* Increased for mobile */
             }
 
             .navbar-text {
-                font-size: 0.85rem;
+                font-size: 1rem; /* Increased for mobile */
             }
 
             .menu-toggle .navbar-toggler-icon {
-                width: 20px;
-                height: 20px;
+                width: 22px;
+                height: 22px;
             }
         }
 
         @media (max-width: 767.98px) {
             .header {
-                padding: 0.5rem 0.75rem;
+                padding: 0.6rem 0.8rem;
             }
 
             .container {
-                padding: 0.75rem;
+                padding: 0.8rem;
             }
 
             .main-content {
-                padding: 1rem;
+                padding: 1.2rem;
             }
 
             .alert {
-                padding: 0.5rem 1rem;
-                font-size: 0.8rem;
+                padding: 0.6rem 1rem;
+                font-size: 0.95rem; /* Increased for mobile */
             }
 
             .sidebar {
-                padding: 1rem 0.75rem;
+                padding: 1.2rem 0.8rem;
+                width: 200px;
             }
 
             .sidebar .nav-link {
-                font-size: 0.9rem;
-                padding: 0.4rem 0.75rem;
+                font-size: 1rem; /* Increased for mobile */
+                padding: 0.5rem 0.8rem;
+            }
+
+            .bg-light h1.display-5 {
+                font-size: 2rem; /* Adjusted for mobile */
+            }
+
+            .bg-light p.lead {
+                font-size: 1.1rem; /* Increased for mobile */
+            }
+
+            .btn-lg {
+                font-size: 1.1rem; /* Adjusted for mobile */
+                padding: 0.4rem 0.8rem;
+            }
+
+            .filter-form label[for="start_date"],
+            .filter-form label[for="end_date"] {
+                font-size: 0.95rem; /* Increased for mobile */
+            }
+
+            .filter-form input[type="date"] {
+                font-size: 0.95rem; /* Increased for mobile */
             }
         }
 
         @media (max-width: 575.98px) {
             .navbar-brand {
-                font-size: 1rem;
+                font-size: 1.1rem; /* Increased for small mobile */
             }
 
             .navbar-brand img.logo {
-                height: 24px;
+                height: 28px;
             }
 
             .header-right {
                 flex-wrap: wrap;
-                gap: 0.25rem;
+                gap: 0.3rem;
             }
 
             .btn-outline-primary {
-                padding: 0.25rem 0.5rem;
-                font-size: 0.8rem;
+                padding: 0.3rem 0.6rem;
+                font-size: 0.9rem; /* Increased for small mobile */
             }
 
             .navbar-text {
-                font-size: 0.8rem;
+                font-size: 0.9rem; /* Increased for small mobile */
             }
 
             .filter-form input[type="date"] {
-                font-size: 0.8rem;
+                font-size: 0.9rem; /* Increased for small mobile */
+            }
+
+            .alert {
+                font-size: 0.9rem; /* Increased for small mobile */
+            }
+
+            .bg-light h1.display-5 {
+                font-size: 1.75rem; /* Adjusted for small mobile */
+            }
+
+            .bg-light p.lead {
+                font-size: 1rem; /* Increased for small mobile */
+            }
+
+            .btn-lg {
+                font-size: 1rem; /* Adjusted for small mobile */
             }
 
             canvas {
@@ -419,8 +465,8 @@
             }
 
             .footer {
-                font-size: 0.75rem;
-                padding: 0.5rem;
+                font-size: 0.9rem; /* Increased for small mobile */
+                padding: 0.6rem;
             }
         }
 
