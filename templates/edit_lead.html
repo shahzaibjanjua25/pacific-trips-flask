@@ -3,72 +3,92 @@
 {% block content %}
 <h2>Edit Lead</h2>
 
-<form method="POST" id="leadForm">
-    <label for="employeeId">Employee:</label>
-    <select name="employeeId" required>
-        {% for emp in employees %}
-        <option value="{{ emp.empId }}" {% if emp.empId==lead.employeeId %}selected{% endif %}>
-            {{ emp.empName }}
-        </option>
-        {% endfor %}
-    </select><br><br>
+<div class="container">
+    <form method="POST" id="leadForm" class="edit-form">
 
-    <label for="customerId">Customer:</label>
-    <select name="customerId" required>
-        {% for cust in customers %}
-        <option value="{{ cust.customerId }}" {% if cust.customerId==lead.customerId %}selected{% endif %}>
-            {{ cust.customerName }}
-        </option>
-        {% endfor %}
-    </select><br><br>
+        <!-- <div class="form-grid"> -->
 
-    <label for="status">Status:</label>
-    <select name="status" id="status" required onchange="checkStatusChange()">
-        {% for s in ['Pending', 'Contacted', 'Lost', 'Willing', 'Paid', 'Refund', 'Confirmed'] %}
-        <option value="{{ s }}" {% if s==lead.status %}selected{% endif %}>{{ s }}</option>
-        {% endfor %}
-    </select><br><br>
+            <div class="form-group">
+                <label for="employeeId">Employee:</label>
+                <select name="employeeId" id="employeeId" required>
+                    {% for emp in employees %}
+                    <option value="{{ emp.empId }}" {% if emp.empId == lead.employeeId %}selected{% endif %}>
+                        {{ emp.empName }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
 
-    <label for="source">Source:</label>
-    <select name="source" required>
-        {% for s in ['Facebook', 'WhatsApp', 'Reference', 'TikTok', 'Other'] %}
-        <option value="{{ s }}" {% if s==lead.source %}selected{% endif %}>{{ s }}</option>
-        {% endfor %}
-    </select><br><br>
+            <div class="form-group">
+                <label for="customerId">Customer:</label>
+                <select name="customerId" id="customerId" required>
+                    {% for cust in customers %}
+                    <option value="{{ cust.customerId }}" {% if cust.customerId == lead.customerId %}selected{% endif %}>
+                        {{ cust.customerName }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
 
-    <label for="currentAddress">Current Address:</label>
-    <input type="text" name="currentAddress" value="{{ lead.currentAddress }}" required><br><br>
+            <div class="form-group">
+                <label for="status">Status:</label>
+                <select name="status" id="status" required onchange="checkStatusChange()">
+                    {% for s in ['Pending', 'Contacted', 'Lost', 'Willing', 'Paid', 'Refund', 'Confirmed'] %}
+                    <option value="{{ s }}" {% if s == lead.status %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-    <label for="desiredDestination">Desired Destination:</label>
-    <input type="text" name="desiredDestination" value="{{ lead.desiredDestination }}" required><br><br>
+            <div class="form-group">
+                <label for="source">Source:</label>
+                <select name="source" id="source" required>
+                    {% for s in ['Facebook', 'WhatsApp', 'Reference', 'TikTok', 'Other'] %}
+                    <option value="{{ s }}" {% if s == lead.source %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-    <!-- Hidden field for amount -->
-    <input type="hidden" id="amountClosed" name="amountClosed" value="{{ lead.amountClosed or 0 }}">
+            <div class="form-group">
+                <label for="currentAddress">Current Address:</label>
+                <input type="text" id="currentAddress" name="currentAddress" value="{{ lead.currentAddress }}" required>
+            </div>
 
-    <button type="submit">Update Lead</button>
-    <a href="{{ url_for('leads') }}">Cancel</a>
-</form>
+            <div class="form-group">
+                <label for="desiredDestination">Desired Destination:</label>
+                <input type="text" id="desiredDestination" name="desiredDestination" value="{{ lead.desiredDestination }}" required>
+            </div>
+        <!-- </div> -->
+
+        <!-- Hidden input -->
+        <input type="hidden" id="amountClosed" name="amountClosed" value="{{ lead.amountClosed or 0 }}">
+
+        <!-- Buttons -->
+        <div class="button-group">
+            <button type="submit" class="btn"> Update Lead</button>
+            <a href="{{ url_for('leads') }}" class="btn danger">Cancel</a>
+        </div>
+    </form>
+</div>
 
 <!-- Amount Input Modal -->
-<div id="amountModal" class="modal" style="display:none;">
+<div id="amountModal" class="modal">
     <div class="modal-content">
         <span class="close" onclick="closeModal()">&times;</span>
         <h3 id="modalTitle">Enter Amount</h3>
-        <input type="number" id="amountInput" placeholder="Enter amount">
-        <button id="confirmAmount" onclick="confirmAmount()">Confirm</button>
+        <input type="number" id="amountInput" placeholder="Enter amount" class="form-input">
+        <button id="confirmAmount" class="btn" onclick="confirmAmount()">Confirm</button>
     </div>
 </div>
 
+<!-- JavaScript -->
 <script>
 let previousStatus = "{{ lead.status }}";
 
 function checkStatusChange() {
     const newStatus = document.getElementById('status').value;
-    
     if (newStatus === 'Confirmed' && previousStatus !== 'Confirmed') {
         showAmountModal('Enter the closed amount for this lead:');
-    } 
-    
+    }
     previousStatus = newStatus;
 }
 
@@ -100,11 +120,88 @@ window.onclick = function(event) {
 }
 </script>
 
+<!-- Styles -->
 <style>
+/* Container */
+.container {
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 6px;
+    max-width: 900px;
+    margin: auto;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Grid Layout */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    font-size: 0.9rem;
+}
+
+.form-group input,
+.form-group select {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    background-color: #f8f9fa;
+}
+
+input:focus,
+select:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+}
+
+/* Buttons */
+.button-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.btn {
+    background-color: #007bff;
+    color: white;
+    padding: 0.5rem 1.25rem;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn:hover {
+    background-color: #0056b3;
+}
+
+.btn.danger {
+    background-color: #dc3545;
+}
+
+.btn.danger:hover {
+    background-color: #a71d2a;
+}
+
+/* Modal */
 .modal {
     display: none;
     position: fixed;
-    z-index: 1;
+    z-index: 9999;
     left: 0;
     top: 0;
     width: 100%;
@@ -113,24 +210,40 @@ window.onclick = function(event) {
 }
 
 .modal-content {
-    background-color: #fefefe;
-    margin: 15% auto;
-    padding: 20px;
-    border: 1px solid #888;
-    width: 80%;
-    max-width: 500px;
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 1.5rem;
+    border-radius: 6px;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.modal-content input {
+    /* width: 80%; */
+    padding: 0.5rem;
+    margin: 1rem 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
 }
 
 .close {
-    color: #aaa;
     float: right;
-    font-size: 28px;
+    font-size: 1.5rem;
     font-weight: bold;
+    color: #aaa;
     cursor: pointer;
 }
 
 .close:hover {
     color: black;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 {% endblock %}

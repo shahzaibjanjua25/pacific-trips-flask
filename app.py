@@ -364,21 +364,23 @@ def index():
     return render_template('base.html')
 
 @app.route('/profile')
-@employee_required
+@login_required  # Assuming a valid login decorator
 def profile():
+    if session.get('role') != 'employee':
+        flash('This page is for employees only', 'danger')
+        return redirect(url_for('index'))
+
     employee = get_employee_details(session['user_id'])
     if not employee:
         flash('Employee details not found.', 'danger')
         return redirect(url_for('index'))
+    
     return render_template('profile.html', employee=employee)
+
 
 @app.route('/customers')
 @login_required
-def customers():
-    if session.get('role') == 'employee':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('index'))
-    
+def customers():    
     filters = {
         "customerName": request.args.get("customerName", ""),
         "phone": request.args.get("phone", ""),
@@ -431,7 +433,7 @@ def customers():
 
 
 @app.route('/add_customer', methods=['GET', 'POST'])
-@admin_required
+# @admin_required
 def add_customer():
     if request.method == 'POST':
         new_id = str(uuid.uuid4())[:8]
@@ -474,7 +476,7 @@ def add_customer():
     return render_template('add_customer.html')
 
 @app.route('/customers/edit/<string:customer_id>', methods=['GET', 'POST'])
-@admin_required
+# @admin_required
 def edit_customer(customer_id):
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
@@ -545,7 +547,7 @@ def edit_customer(customer_id):
     return render_template('edit_customer.html', customer=customer)
 
 @app.route('/customers/delete/<string:customer_id>')
-@admin_required
+# @admin_required
 def delete_customer(customer_id):
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
@@ -759,7 +761,7 @@ def leads():
                          })
 
 @app.route('/leads/add', methods=['GET', 'POST'])
-@admin_required
+# @admin_required
 def add_lead():
     if request.method == 'POST':
         form = request.form
@@ -849,7 +851,7 @@ def add_lead():
                            customers=get_all_customers())
 
 @app.route('/leads/edit/<string:lead_id>', methods=['GET', 'POST'])
-@admin_required
+# @admin_required
 def edit_lead(lead_id):
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
@@ -1007,7 +1009,7 @@ def delete_lead(lead_id):
     return redirect(url_for('leads'))
 
 @app.route("/leads/create", methods=["GET", "POST"])
-@admin_required
+# @admin_required
 def create_lead():
     employees = get_all_employees()
     customers = get_all_customers()

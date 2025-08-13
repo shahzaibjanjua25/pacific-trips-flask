@@ -8,67 +8,69 @@
     <a href="{{ url_for('add_lead') }}" class="btn">➕ Add Lead</a>
 </div>
 
-<!-- 🔍 Filters + Sorting -->
-<form method="GET" action="{{ url_for('leads') }}" class="filter-form">
-    {% if session.role == 'admin' %}
-    <label>Employee:
-        <select name="employeeId">
-            <option value="">All</option>
-            {% for emp in filter_options.employees %}
-            <option value="{{ emp.empId }}" {% if filters.employeeId == emp.empId %}selected{% endif %}>
-                {{ emp.empName }}
-            </option>
-            {% endfor %}
-        </select>
-    </label>
-    {% endif %}
+<div class="filter-card">
+    <form method="GET" action="{{ url_for('leads') }}" class="filter-form">
 
-    <label>Customer:
-        <select name="customerId">
-            <option value="">All</option>
-            {% for cust in filter_options.customers %}
-            <option value="{{ cust.customerId }}" {% if filters.customerId == cust.customerId %}selected{% endif %}>
-                {{ cust.customerName }}
-            </option>
-            {% endfor %}
-        </select>
-    </label>
 
-    <label>Status:
-        <select name="status">
-            <option value="">All</option>
-            {% for val in leads | map(attribute='status') | unique %}
-            <option value="{{ val }}" {% if filters.status == val %}selected{% endif %}>{{ val }}</option>
-            {% endfor %}
-        </select>
-    </label>
+        <label>Employee:
+            <select name="employeeId">
+                <option value="">All</option>
+                {% for emp in filter_options.employees %}
+                <option value="{{ emp.empId }}" {% if filters.employeeId==emp.empId %}selected{% endif %}>
+                    {{ emp.empName }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
 
-    <label>Created From:
-        <input type="date" name="start_date" value="{{ filters.start_date }}">
-    </label>
+        <label>Customer:
+            <select name="customerId">
+                <option value="">All</option>
+                {% for cust in filter_options.customers %}
+                <option value="{{ cust.customerId }}" {% if filters.customerId==cust.customerId %}selected{% endif %}>
+                    {{ cust.customerName }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
 
-    <label>Created To:
-        <input type="date" name="end_date" value="{{ filters.end_date }}">
-    </label>
+        <label>Status:
+            <select name="status">
+                <option value="">All</option>
+                {% for val in leads | map(attribute='status') | unique %}
+                <option value="{{ val }}" {% if filters.status==val %}selected{% endif %}>{{ val }}</option>
+                {% endfor %}
+            </select>
+        </label>
 
-    <label>Sort By:
-        <select name="sort_by">
-            {% for col in ['employeeLeadId', 'employeeId', 'empName', 'customerId', 'customerName', 'status', 'currentAddress', 'desiredDestination', 'source', 'createdAt', 'updatedAt'] %}
-            <option value="{{ col }}" {% if sort_by == col %}selected{% endif %}>{{ col }}</option>
-            {% endfor %}
-        </select>
-    </label>
+        <label>Created From:
+            <input type="date" name="start_date" value="{{ filters.start_date }}">
+        </label>
 
-    <label>Order:
-        <select name="sort_order">
-            <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
-            <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
-        </select>
-    </label>
+        <label>Created To:
+            <input type="date" name="end_date" value="{{ filters.end_date }}">
+        </label>
 
-    <button type="submit" class="btn">Apply Filters</button>
-    <a href="{{ url_for('leads') }}" class="btn danger">Reset</a>
-</form>
+        <label>Sort By:
+            <select name="sort_by">
+                {% for col in ['employeeLeadId', 'employeeId', 'empName', 'customerId', 'customerName', 'status',
+                'currentAddress', 'desiredDestination', 'source', 'createdAt', 'updatedAt'] %}
+                <option value="{{ col }}" {% if sort_by==col %}selected{% endif %}>{{ col }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>Order:
+            <select name="sort_order">
+                <option value="asc" {% if sort_order=='asc' %}selected{% endif %}>Ascending</option>
+                <option value="desc" {% if sort_order=='desc' %}selected{% endif %}>Descending</option>
+            </select>
+        </label>
+
+        <button type="submit" class="btn">Apply Filters</button>
+        <a href="{{ url_for('leads') }}" class="btn danger">Reset</a>
+    </form>
+</div>
 
 <!-- 📋 Leads Table -->
 <table>
@@ -101,7 +103,7 @@
             <td>
                 <a href="{{ url_for('edit_lead', lead_id=lead.employeeLeadId) }}" class="btn small">✏️</a>
                 <a href="{{ url_for('delete_lead', lead_id=lead.employeeLeadId) }}" class="btn-delete"
-                   onclick="return confirm('Are you sure you want to delete this lead?');">Delete</a>
+                    onclick="return confirm('Are you sure you want to delete this lead?');">Delete</a>
             </td>
         </tr>
         {% endfor %}
@@ -109,530 +111,546 @@
 </table>
 
 <style>
-/* 🌐 Global Reset & Base Styles */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f4f7fa;
-    color: #333;
-    line-height: 1.6;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-
-body.sidebar-open {
-    overflow-x: hidden;
-}
-
-/* 🔗 Link Styling */
-a {
-    text-decoration: none;
-    transition: color 0.3s ease, background-color 0.3s ease;
-}
-
-/* 🔝 Header */
-.header {
-    background-color: #004e7c;
-    color: white;
-    padding: 0.75rem 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 1000;
-}
-
-/* Header Left (Toggle + Brand) */
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.navbar-brand {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.navbar-brand img.logo {
-    height: 36px;
-    width: auto;
-    object-fit: contain;
-}
-
-.navbar-brand:hover {
-    color: #80bdff;
-}
-
-/* Header Right (Welcome + Buttons) */
-.header-right {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.navbar-text {
-    color: white;
-    font-size: 0.95rem;
-    font-weight: 500;
-}
-
-/* Buttons (Login/Logout/Register) */
-.btn-outline-primary {
-    border-color: #007bff;
-    color: #eff1f3;
-    font-weight: 500;
-    padding: 0.4rem 1rem;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-    font-size: 0.9rem;
-}
-
-.btn-outline-primary:hover {
-    background-color: #007bff;
-    color: white;
-    border-color: #007bff;
-}
-
-/* 🍔 Menu Toggle Button */
-.menu-toggle {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.25rem;
-    cursor: pointer;
-    padding: 0.5rem;
-    line-height: 1;
-}
-
-.menu-toggle .navbar-toggler-icon {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(255, 255, 255, 0.9)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
-    width: 24px;
-    height: 24px;
-    display: inline-block;
-}
-
-.menu-toggle:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
-}
-
-/* 📐 Layout */
-.layout {
-    display: flex;
-    margin-top: 56px;
-    min-height: calc(100vh - 56px - 48px);
-}
-
-/* 📚 Sidebar */
-.sidebar {
-    width: 220px;
-    background-color: #003354;
-    color: white;
-    padding: 1.5rem 1rem;
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    top: 56px;
-    bottom: 0;
-    z-index: 999;
-    transition: transform 0.3s ease-in-out;
-}
-
-.sidebar .nav {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.sidebar .nav-link {
-    color: white;
-    font-size: 0.95rem;
-    font-weight: 500;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    transition: background-color 0.2s ease, color 0.2s ease;
-    display: flex;
-    align-items: center;
-}
-
-.sidebar .nav-link:hover,
-.sidebar .nav-link.active {
-    background-color: #0069aa;
-    color: white;
-}
-
-/* Sidebar Closed */
-.sidebar-closed {
-    transform: translateX(-100%);
-}
-
-/* 📱 Overlay for Sidebar */
-.overlay {
-    display: none;
-    position: fixed;
-    top: 56px;
-    left: 0;
-    width: 100%;
-    height: calc(100% - 56px);
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 998;
-    transition: opacity 0.3s ease;
-}
-
-.overlay.active {
-    display: block;
-    opacity: 1;
-}
-
-/* 📄 Main Content */
-.main-content {
-    flex-grow: 1;
-    padding: 1.5rem;
-    transition: margin-left 0.3s ease-in-out;
-    margin-left: 220px;
-}
-
-.sidebar-closed ~ .main-content {
-    margin-left: 0;
-}
-
-/* Container */
-.container {
-    max-width: 1140px;
-    margin: 0 auto;
-    padding: 1rem;
-    background-color: white;
-    border-radius: 6px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-/* ✅ Flash Messages (Bootstrap Alerts) */
-.alert {
-    padding: 0.75rem 1.25rem;
-    border-radius: 4px;
-    margin-bottom: 0.75rem;
-    font-weight: 500;
-    position: relative;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.alert-success {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-}
-
-.alert-danger {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-}
-
-.alert-info {
-    background-color: #d1ecf1;
-    color: #0c5460;
-    border: 1px solid #bee5eb;
-}
-
-.alert .btn-close {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.75rem;
-    padding: 0.5rem;
-    opacity: 0.7;
-    transition: opacity 0.3s ease;
-}
-
-.alert .btn-close:hover {
-    opacity: 1;
-}
-
-/* 📊 Chart.js Canvas */
-canvas {
-    max-width: 100%;
-    height: auto;
-    margin: 0.75rem 0;
-    border-radius: 4px;
-    background-color: #fff;
-    padding: 0.75rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-/* 📆 Filter Form (Base Styles for Consistency) */
-.filter-form {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.filter-form label {
-    display: flex;
-    flex-direction: column;
-    font-size: 0.85rem;
-    color: #333;
-    margin-bottom: 0.5rem;
-}
-
-.filter-form select,
-.filter-form input[type="date"] {
-    padding: 0.4rem;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    background-color: #f8f9fa;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.filter-form select:focus,
-.filter-form input[type="date"]:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 4px rgba(0, 123, 255, 0.3);
-}
-
-/* 🔚 Footer */
-.footer {
-    background-color: #004e7c;
-    color: white;
-    text-align: center;
-    padding: 0.75rem;
-    font-size: 0.85rem;
-    border-top: 1px solid #003354;
-    margin-top: auto;
-}
-
-/* 📱 Responsive Styles */
-@media (max-width: 991.98px) {
-    .sidebar {
-        width: 200px;
-        transform: translateX(-100%);
+    /* 🌐 Global Reset & Base Styles */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
     }
 
-    .sidebar:not(.sidebar-closed) {
-        transform: translateX(0);
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f4f7fa;
+        color: #333;
+        line-height: 1.6;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
     }
 
-    .main-content {
-        margin-left: 0;
+    body.sidebar-open {
+        overflow-x: hidden;
     }
 
-    .navbar-brand {
-        font-size: 1.1rem;
+    /* 🔗 Link Styling */
+    a {
+        text-decoration: none;
+        transition: color 0.3s ease, background-color 0.3s ease;
     }
 
-    .navbar-brand img.logo {
-        height: 28px;
+    /* 🔝 Header */
+    .header {
+        background-color: #004e7c;
+        color: white;
+        padding: 0.75rem 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
     }
 
-    .header-right {
+    /* Header Left (Toggle + Brand) */
+    .header-left {
+        display: flex;
+        align-items: center;
         gap: 0.5rem;
     }
 
-    .btn-outline-primary {
-        padding: 0.3rem 0.75rem;
-        font-size: 0.85rem;
-    }
-
-    .navbar-text {
-        font-size: 0.85rem;
-    }
-
-    .menu-toggle .navbar-toggler-icon {
-        width: 20px;
-        height: 20px;
-    }
-}
-
-@media (max-width: 767.98px) {
-    .header {
-        padding: 0.5rem 0.75rem;
-    }
-
-    .container {
-        padding: 0.75rem;
-    }
-
-    .main-content {
-        padding: 1rem;
-    }
-
-    .alert {
-        padding: 0.5rem 1rem;
-        font-size: 0.8rem;
-    }
-
-    .sidebar {
-        padding: 1rem 0.75rem;
-        width: 180px;
-    }
-
-    .sidebar .nav-link {
-        font-size: 0.9rem;
-        padding: 0.4rem 0.75rem;
-    }
-
-    .filter-form {
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-}
-
-@media (max-width: 575.98px) {
     .navbar-brand {
-        font-size: 1rem;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
     .navbar-brand img.logo {
-        height: 24px;
+        height: 36px;
+        width: auto;
+        object-fit: contain;
     }
 
+    .navbar-brand:hover {
+        color: #80bdff;
+    }
+
+    /* Header Right (Welcome + Buttons) */
     .header-right {
-        flex-wrap: wrap;
-        gap: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
     }
 
-    .btn-outline-primary {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.8rem;
+    .filter-card {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+        width: 100%;
     }
 
     .navbar-text {
-        font-size: 0.8rem;
+        color: white;
+        font-size: 0.95rem;
+        font-weight: 500;
+    }
+
+    /* Buttons (Login/Logout/Register) */
+    .btn-outline-primary {
+        border-color: #007bff;
+        color: #eff1f3;
+        font-weight: 500;
+        padding: 0.4rem 1rem;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+    }
+
+    .btn-outline-primary:hover {
+        background-color: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+
+    /* 🍔 Menu Toggle Button */
+    .menu-toggle {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.25rem;
+        cursor: pointer;
+        padding: 0.5rem;
+        line-height: 1;
+    }
+
+    .menu-toggle .navbar-toggler-icon {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(255, 255, 255, 0.9)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+        width: 24px;
+        height: 24px;
+        display: inline-block;
+    }
+
+    .menu-toggle:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
+    }
+
+    /* 📐 Layout */
+    .layout {
+        display: flex;
+        margin-top: 56px;
+        min-height: calc(100vh - 56px - 48px);
+    }
+
+    /* 📚 Sidebar */
+    .sidebar {
+        width: 220px;
+        background-color: #003354;
+        color: white;
+        padding: 1.5rem 1rem;
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 56px;
+        bottom: 0;
+        z-index: 999;
+        transition: transform 0.3s ease-in-out;
+    }
+
+    .sidebar .nav {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .sidebar .nav-link {
+        color: white;
+        font-size: 0.95rem;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        transition: background-color 0.2s ease, color 0.2s ease;
+        display: flex;
+        align-items: center;
+    }
+
+    .sidebar .nav-link:hover,
+    .sidebar .nav-link.active {
+        background-color: #0069aa;
+        color: white;
+    }
+
+    /* Sidebar Closed */
+    .sidebar-closed {
+        transform: translateX(-100%);
+    }
+
+    /* 📱 Overlay for Sidebar */
+    .overlay {
+        display: none;
+        position: fixed;
+        top: 56px;
+        left: 0;
+        width: 100%;
+        height: calc(100% - 56px);
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 998;
+        transition: opacity 0.3s ease;
+    }
+
+    .overlay.active {
+        display: block;
+        opacity: 1;
+    }
+
+    /* 📄 Main Content */
+    .main-content {
+        flex-grow: 1;
+        padding: 1.5rem;
+        transition: margin-left 0.3s ease-in-out;
+        margin-left: 220px;
+    }
+
+    .sidebar-closed~.main-content {
+        margin-left: 0;
+    }
+
+    /* Container */
+    .container {
+        margin: 0 auto;
+        padding: 1rem;
+        background-color: white;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    /* ✅ Flash Messages (Bootstrap Alerts) */
+    .alert {
+        padding: 0.75rem 1.25rem;
+        border-radius: 4px;
+        margin-bottom: 0.75rem;
+        font-weight: 500;
+        position: relative;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .alert-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+    }
+
+    .alert .btn-close {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.75rem;
+        padding: 0.5rem;
+        opacity: 0.7;
+        transition: opacity 0.3s ease;
+    }
+
+    .alert .btn-close:hover {
+        opacity: 1;
+    }
+
+    /* 📊 Chart.js Canvas */
+    canvas {
+        max-width: 100%;
+        height: auto;
+        margin: 0.75rem 0;
+        border-radius: 4px;
+        background-color: #fff;
+        padding: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    /* 📆 Filter Form (Base Styles for Consistency) */
+    .filter-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        width: 100%;
+    }
+
+    .filter-form label {
+        display: flex;
+        flex-direction: column;
+        font-size: 0.85rem;
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+
+    form .filter-form {
+        width: 100px;
     }
 
     .filter-form select,
     .filter-form input[type="date"] {
+        padding: 0.4rem;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        background-color: #f8f9fa;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .filter-form select:focus,
+    .filter-form input[type="date"]:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 4px rgba(0, 123, 255, 0.3);
+    }
+
+    /* 🔚 Footer */
+    .footer {
+        background-color: #004e7c;
+        color: white;
+        text-align: center;
+        padding: 0.75rem;
+        font-size: 0.85rem;
+        border-top: 1px solid #003354;
+        margin-top: auto;
+    }
+
+    /* 📱 Responsive Styles */
+    @media (max-width: 991.98px) {
+        .sidebar {
+            width: 200px;
+            transform: translateX(-100%);
+        }
+
+        .sidebar:not(.sidebar-closed) {
+            transform: translateX(0);
+        }
+
+        .main-content {
+            margin-left: 0;
+        }
+
+        .navbar-brand {
+            font-size: 1.1rem;
+        }
+
+        .navbar-brand img.logo {
+            height: 28px;
+        }
+
+        .header-right {
+            gap: 0.5rem;
+        }
+
+        .btn-outline-primary {
+            padding: 0.3rem 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        .navbar-text {
+            font-size: 0.85rem;
+        }
+
+        .menu-toggle .navbar-toggler-icon {
+            width: 20px;
+            height: 20px;
+        }
+    }
+
+    @media (max-width: 767.98px) {
+        .header {
+            padding: 0.5rem 0.75rem;
+        }
+
+        .container {
+            padding: 0.75rem;
+        }
+
+        .main-content {
+            padding: 1rem;
+        }
+
+        .alert {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+        }
+
+        .sidebar {
+            padding: 1rem 0.75rem;
+            width: 180px;
+        }
+
+        .sidebar .nav-link {
+            font-size: 0.9rem;
+            padding: 0.4rem 0.75rem;
+        }
+
+        .filter-form {
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .navbar-brand {
+            font-size: 1rem;
+        }
+
+        .navbar-brand img.logo {
+            height: 24px;
+        }
+
+        .header-right {
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+        .btn-outline-primary {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .navbar-text {
+            font-size: 0.8rem;
+        }
+
+        .filter-form select,
+        .filter-form input[type="date"] {
+            font-size: 0.8rem;
+        }
+
+        canvas {
+            padding: 0.5rem;
+        }
+
+        .footer {
+            font-size: 0.75rem;
+            padding: 0.5rem;
+        }
+    }
+
+    /* Accessibility Improvements */
+    :focus {
+        outline: 2px solid #007bff;
+        outline-offset: 2px;
+    }
+
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+    }
+
+    /* Smooth Scroll Behavior */
+    html {
+        scroll-behavior: smooth;
+    }
+
+    /* Touch-Friendly Interactions */
+    button,
+    a,
+    .menu-toggle {
+        touch-action: manipulation;
+    }
+
+    /* Table Styling */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+        background-color: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    th,
+    td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    th {
+        background-color: #1477db;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #ffffff;
+    }
+
+    td {
+        font-size: 0.85rem;
+    }
+
+    tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    /* Button Group */
+    .button-group {
+        margin-bottom: 1rem;
+    }
+
+    .btn {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        background-color: #007bff;
+        color: white;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: background-color 0.3s ease;
+    }
+
+    .btn:hover {
+        background-color: #0056b3;
+    }
+
+    .btn.small {
+        padding: 0.25rem 0.5rem;
         font-size: 0.8rem;
     }
 
-    canvas {
-        padding: 0.5rem;
+    .btn-delete {
+        color: #dc3545;
+        font-size: 0.85rem;
+        padding: 0.25rem 0.5rem;
     }
 
-    .footer {
-        font-size: 0.75rem;
-        padding: 0.5rem;
+    .btn-delete:hover {
+        color: #a71d2a;
     }
-}
 
-/* Accessibility Improvements */
-:focus {
-    outline: 2px solid #007bff;
-    outline-offset: 2px;
-}
+    /* Danger Button */
+    .btn.danger {
+        background-color: #dc3545;
+    }
 
-.sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    border: 0;
-}
-
-/* Smooth Scroll Behavior */
-html {
-    scroll-behavior: smooth;
-}
-
-/* Touch-Friendly Interactions */
-button, a, .menu-toggle {
-    touch-action: manipulation;
-}
-
-/* Table Styling */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 1rem;
-    background-color: white;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-th, td {
-    padding: 0.75rem;
-    text-align: left;
-    border-bottom: 1px solid #dee2e6;
-}
-
-th {
-    background-color: #1477db;
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #ffffff;
-}
-
-td {
-    font-size: 0.85rem;
-}
-
-tr:hover {
-    background-color: #f8f9fa;
-}
-
-/* Button Group */
-.button-group {
-    margin-bottom: 1rem;
-}
-
-.btn {
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    background-color: #007bff;
-    color: white;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: background-color 0.3s ease;
-}
-
-.btn:hover {
-    background-color: #0056b3;
-}
-
-.btn.small {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
-}
-
-.btn-delete {
-    color: #dc3545;
-    font-size: 0.85rem;
-    padding: 0.25rem 0.5rem;
-}
-
-.btn-delete:hover {
-    color: #a71d2a;
-}
-
-/* Danger Button */
-.btn.danger {
-    background-color: #dc3545;
-}
-
-.btn.danger:hover {
-    background-color: #a71d2a;
-}
+    .btn.danger:hover {
+        background-color: #a71d2a;
+    }
 </style>
 {% endblock %}

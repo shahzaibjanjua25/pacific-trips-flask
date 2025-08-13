@@ -5,6 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pacific Trips Employee Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='customers.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='employees.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='add form.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Pacific Trips Employee Management System</title>
     <style>
         /* 🌐 Global Reset & Base Styles */
         * {
@@ -21,7 +28,8 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            font-size: 16px; /* Base font size for better readability */
+            font-size: 16px;
+            /* Base font size for better readability */
         }
 
         body.sidebar-open {
@@ -88,6 +96,7 @@
             font-size: 0.95rem;
             font-weight: 500;
         }
+
         /* Buttons (Login/Logout/Register) */
         .btn-outline-primary {
             border-color: #007bff;
@@ -207,7 +216,7 @@
             margin-left: 220px;
         }
 
-        .sidebar-closed ~ .main-content {
+        .sidebar-closed~.main-content {
             margin-left: 0;
         }
 
@@ -340,7 +349,8 @@
             }
 
             .navbar-brand {
-                font-size: 1.3rem; /* Increased for mobile */
+                font-size: 1.3rem;
+                /* Increased for mobile */
             }
 
             .navbar-brand img.logo {
@@ -353,11 +363,13 @@
 
             .btn-outline-primary {
                 padding: 0.4rem 0.8rem;
-                font-size: 1rem; /* Increased for mobile */
+                font-size: 1rem;
+                /* Increased for mobile */
             }
 
             .navbar-text {
-                font-size: 1rem; /* Increased for mobile */
+                font-size: 1rem;
+                /* Increased for mobile */
             }
 
             .menu-toggle .navbar-toggler-icon {
@@ -381,7 +393,8 @@
 
             .alert {
                 padding: 0.6rem 1rem;
-                font-size: 0.95rem; /* Increased for mobile */
+                font-size: 0.95rem;
+                /* Increased for mobile */
             }
 
             .sidebar {
@@ -390,36 +403,43 @@
             }
 
             .sidebar .nav-link {
-                font-size: 1rem; /* Increased for mobile */
+                font-size: 1rem;
+                /* Increased for mobile */
                 padding: 0.5rem 0.8rem;
             }
 
             .bg-light h1.display-5 {
-                font-size: 2rem; /* Adjusted for mobile */
+                font-size: 2rem;
+                /* Adjusted for mobile */
             }
 
             .bg-light p.lead {
-                font-size: 1.1rem; /* Increased for mobile */
+                font-size: 1.1rem;
+                /* Increased for mobile */
             }
 
             .btn-lg {
-                font-size: 1.1rem; /* Adjusted for mobile */
+                font-size: 1.1rem;
+                /* Adjusted for mobile */
                 padding: 0.4rem 0.8rem;
             }
 
             .filter-form label[for="start_date"],
             .filter-form label[for="end_date"] {
-                font-size: 0.95rem; /* Increased for mobile */
+                font-size: 0.95rem;
+                /* Increased for mobile */
             }
 
             .filter-form input[type="date"] {
-                font-size: 0.95rem; /* Increased for mobile */
+                font-size: 0.95rem;
+                /* Increased for mobile */
             }
         }
 
         @media (max-width: 575.98px) {
             .navbar-brand {
-                font-size: 1.1rem; /* Increased for small mobile */
+                font-size: 1.1rem;
+                /* Increased for small mobile */
             }
 
             .navbar-brand img.logo {
@@ -433,31 +453,38 @@
 
             .btn-outline-primary {
                 padding: 0.3rem 0.6rem;
-                font-size: 0.9rem; /* Increased for small mobile */
+                font-size: 0.9rem;
+                /* Increased for small mobile */
             }
 
             .navbar-text {
-                font-size: 0.9rem; /* Increased for small mobile */
+                font-size: 0.9rem;
+                /* Increased for small mobile */
             }
 
             .filter-form input[type="date"] {
-                font-size: 0.9rem; /* Increased for small mobile */
+                font-size: 0.9rem;
+                /* Increased for small mobile */
             }
 
             .alert {
-                font-size: 0.9rem; /* Increased for small mobile */
+                font-size: 0.9rem;
+                /* Increased for small mobile */
             }
 
             .bg-light h1.display-5 {
-                font-size: 1.75rem; /* Adjusted for small mobile */
+                font-size: 1.75rem;
+                /* Adjusted for small mobile */
             }
 
             .bg-light p.lead {
-                font-size: 1rem; /* Increased for small mobile */
+                font-size: 1rem;
+                /* Increased for small mobile */
             }
 
             .btn-lg {
-                font-size: 1rem; /* Adjusted for small mobile */
+                font-size: 1rem;
+                /* Adjusted for small mobile */
             }
 
             canvas {
@@ -465,7 +492,8 @@
             }
 
             .footer {
-                font-size: 0.9rem; /* Increased for small mobile */
+                font-size: 0.9rem;
+                /* Increased for small mobile */
                 padding: 0.6rem;
             }
         }
@@ -558,17 +586,23 @@
                     <a class="nav-link {% if request.endpoint == 'logs' %}active{% endif %}"
                         href="{{ url_for('logs') }}">Logs</a>
                 </li>
+                <!-- Admin should NOT see profile -->
                 {% elif session.role == 'employee' %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'customers' %}active{% endif %}"
+                        href="{{ url_for('customers') }}">Customers</a>
+                </li>
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint == 'leads' %}active{% endif %}"
                         href="{{ url_for('leads') }}">Leads</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}"
-                        href="{{ url_for('profile') }}">Profile Details</a>
+                        href="{{ url_for('profile') }}">Profile</a>
                 </li>
                 {% endif %}
                 {% endif %}
+
             </ul>
         </nav>
 

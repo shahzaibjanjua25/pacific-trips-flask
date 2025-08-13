@@ -99,14 +99,14 @@ def profile():
     if current_user.role != 'employee':
         flash('This page is for employees only', 'danger')
         return redirect(url_for('index'))
-    
+
     with closing(get_db_connection()) as conn:
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM employees WHERE empId = ?', (current_user.employee_id,))
         employee = cursor.fetchone()
-        
+
         if not employee:
             flash('Employee data not found', 'danger')
             return redirect(url_for('index'))
-    
+
     return render_template('profile.html', employee=dict(employee))
