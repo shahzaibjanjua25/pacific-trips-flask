@@ -241,3 +241,42 @@ a {
         width: 100%;
     }
 }
+/* Overlay for mobile sidebar */
+.overlay {
+  display: none;
+  position: fixed;
+  top: 64px; /* header height */
+  left: 0;
+  width: 100%;
+  height: calc(100% - 64px);
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 999;
+}
+
+/* Show overlay when sidebar is open */
+.sidebar:not(.sidebar-closed) + .overlay {
+  display: block;
+}
+
+/* Hide overlay on desktop */
+@media (min-width: 769px) {
+  .overlay {
+    display: none !important;
+  }
+}
+.menu-toggle {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.8rem;
+    cursor: pointer;
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    z-index: 1100;
+}
+
+.header-left {
+    margin-left: 50px;
+}
+

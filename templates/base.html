@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Pacific Trips Employee Management System</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='customers.css') }}">
@@ -13,15 +13,14 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
-<header class="header">
-    <div class="header-left">
-        <img src="../static/logo.webp" alt="Pacific Trips Logo" class="logo">
-        <h1>Pacific Trips Employee Management System</h1>
-    </div>
-    <button class="menu-toggle" id="menuToggle">☰</button> 
-</header>
-
-
+<body>
+    <header class="header">
+        <div class="header-left">
+            <img src="../static/logo.webp" alt="Pacific Trips Logo" class="logo" />
+            <h1>Pacific Trips Employee Management System</h1>
+        </div>
+        <button class="menu-toggle" id="menuToggle">☰</button>
+    </header>
 
     <!-- 🔧 Layout wrapper with Sidebar and Main Content -->
     <div class="layout">
@@ -37,9 +36,11 @@
             </ul>
         </nav>
 
+        <!-- Overlay for mobile when sidebar is open -->
+        <div class="overlay" id="overlay"></div>
+
         <!-- 📄 Main Content Area -->
         <main class="main-content">
-        
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
             <ul class="flashes">
@@ -61,8 +62,16 @@
 
     <!-- 📜 JavaScript to toggle sidebar -->
     <script>
-        document.getElementById("menuToggle").addEventListener("click", function () {
-            document.getElementById("sidebar").classList.toggle("sidebar-closed");
+        const menuToggle = document.getElementById("menuToggle");
+        const sidebar = document.getElementById("sidebar");
+        const overlay = document.getElementById("overlay");
+
+        menuToggle.addEventListener("click", () => {
+            sidebar.classList.toggle("sidebar-closed");
+        });
+
+        overlay.addEventListener("click", () => {
+            sidebar.classList.add("sidebar-closed");
         });
     </script>
 </body>
