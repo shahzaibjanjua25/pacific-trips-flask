@@ -1,24 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Meta -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile</title>
+
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <style>
+        body {
+            background: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+        }
+
+        .profile-container {
+            max-width: 600px;
+            margin: 80px auto;
+        }
+
+        .page-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 30px;
+            color: #343a40;
+        }
+
+        .card {
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #0d6efd;
+        }
+
+        .card p {
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+        }
+
+        .card p strong {
+            color: #495057;
+            width: 150px;
+            display: inline-block;
+        }
+
+        .btn {
+            margin-top: 20px;
+        }
+
+        .alert {
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 576px) {
+            .card-body {
+                padding: 20px;
+            }
+
+            .card p strong {
+                width: 120px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <h2>Employee Profile</h2>
+    <div class="container profile-container">
+        <h2 class="page-title">👤 Employee Profile</h2>
+
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
+
+        <!-- Profile Card -->
         <div class="card">
             <div class="card-body">
                 <h5 class="card-title">Employee Details</h5>
+
                 <p><strong>Employee ID:</strong> {{ employee.empId }}</p>
                 <p><strong>Name:</strong> {{ employee.empName }}</p>
                 <p><strong>Phone Number:</strong> {{ employee.phoneNo }}</p>
@@ -26,9 +105,13 @@
                 <p><strong>Achieved Amount:</strong> {{ employee.achievedAmount }}</p>
                 <p><strong>Created At:</strong> {{ employee.createdAt }}</p>
                 <p><strong>Updated At:</strong> {{ employee.updatedAt }}</p>
-                <a href="{{ url_for('index') }}" class="btn btn-primary">Back to Home</a>
+
+                <a href="{{ url_for('index') }}" class="btn btn-primary">⬅ Back to Home</a>
             </div>
         </div>
     </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
