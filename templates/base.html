@@ -4,83 +4,67 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Database Management System</title>
+    <title>Pacific Trips Employee Management System</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='customers.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='employees.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='add form.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 </head>
 
-<body>
-    <!-- 🔝 Page Header -->
-    <header class="header">
-        <h1>Database Management System</h1>
+<header class="header">
+    <div class="header-left">
+        <img src="../static/logo.webp" alt="Pacific Trips Logo" class="logo">
+        <h1>Pacific Trips Employee Management System</h1>
+    </div>
+    <button class="menu-toggle" id="menuToggle">☰</button> 
+</header>
 
-        <!-- 🔗 Navigation Bar -->
-        <nav class="navbar">
+
+
+    <!-- 🔧 Layout wrapper with Sidebar and Main Content -->
+    <div class="layout">
+        <!-- 📚 Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar">
             <ul>
-                <li>
-                    <a href="{{ url_for('customers') }}"
-                        class="{% if request.endpoint == 'customers' %}active{% endif %}">
-                        Customers
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('employees') }}"
-                        class="{% if request.endpoint == 'employees' %}active{% endif %}">
-                        Employees
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('leads') }}" class="{% if request.endpoint == 'leads' %}active{% endif %}">
-                        Leads
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('dashboard') }}"
-                        class="{% if request.endpoint == 'dashboard' %}active{% endif %}">
-                        Dashboard
-                    </a>
-                </li>
-                <!-- NEW LOGS LINK -->
-                <li>
-                    <a href="{{ url_for('logs') }}" class="{% if request.endpoint == 'logs' %}active{% endif %}">
-                        Logs
-                    </a>
-                </li>
-                <li><a href="{{ url_for('status_changes') }}">Status Tracking</a></li>
+                <li><a href="{{ url_for('customers') }}" class="{% if request.endpoint == 'customers' %}active{% endif %}">Customers</a></li>
+                <li><a href="{{ url_for('employees') }}" class="{% if request.endpoint == 'employees' %}active{% endif %}">Employees</a></li>
+                <li><a href="{{ url_for('leads') }}" class="{% if request.endpoint == 'leads' %}active{% endif %}">Leads</a></li>
+                <li><a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">Dashboard</a></li>
+                <li><a href="{{ url_for('logs') }}" class="{% if request.endpoint == 'logs' %}active{% endif %}">Logs</a></li>
+                <li><a href="{{ url_for('status_changes') }}" class="{% if request.endpoint == 'status_changes' %}active{% endif %}">Status Tracking</a></li>
             </ul>
         </nav>
 
-        <!-- 🌟 Welcome Banner -->
-        <section class="welcome-banner">
-            <p>👋 Welcome to the Database Management System – View, Edit, and Manage Everything Smoothly!</p>
-        </section>
-    </header>
+        <!-- 📄 Main Content Area -->
+        <main class="main-content">
+        
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <ul class="flashes">
+                {% for category, message in messages %}
+                <li class="flash {{ category }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% endwith %}
 
-    <!-- 📄 Main Content Area -->
-    <main class="main-content">
-        <!-- ✅ Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        <ul class="flashes">
-            {% for category, message in messages %}
-            <li class="flash {{ category }}">{{ message }}</li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-        {% endwith %}
-
-        {% block content %}{% endblock %}
-    </main>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
 
     <!-- 🔚 Footer -->
     <footer class="footer">
         <p>&copy; 2025 Pacific Trips</p>
     </footer>
+
+    <!-- 📜 JavaScript to toggle sidebar -->
+    <script>
+        document.getElementById("menuToggle").addEventListener("click", function () {
+            document.getElementById("sidebar").classList.toggle("sidebar-closed");
+        });
+    </script>
 </body>
 
 </html>
