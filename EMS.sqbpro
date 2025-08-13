@@ -1,2 +1,58 @@
-<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="EMS.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="4659"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="7" parent="0"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="users" custom_title="0" dock_id="1" table="4,5:mainusers"/><dock_state state="000000ff00000000fd0000000100000002000004e4000002aefc0100000001fb000000160064006f0063006b00420072006f00770073006500310100000000000004e40000011800ffffff000002580000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="change_logs" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="43"/><column index="2" value="68"/><column index="3" value="50"/><column index="4" value="74"/><column index="5" value="61"/><column index="6" value="43"/><column index="7" value="68"/><column index="8" value="74"/><column index="9" value="102"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="users" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="74"/><column index="2" value="300"/><column index="3" value="70"/><column index="4" value="156"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="SQL 1*">INSERT INTO users (employeeId, password_hash, role) 
-VALUES ('chand3425', 'scrypt:32768:8:1$E6YGQQOfmWv3qKTy$22d14106b63a66f5fc5b8cdd259aeac53723c0eb1d230050c483a1d27aea38e55ae9cc8b10e01bd452df7e5798dae5ba3da0a4fc0781fb6b13720b565249b56b', 'admin');</sql><current_tab id="0"/></tab_sql></sqlb_project>
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="EMS.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="3221"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="change_logs" custom_title="0" dock_id="1" table="4,11:mainchange_logs"/><dock_state state="000000ff00000000fd00000001000000020000000000000000fc0100000001fb000000160064006f0063006b00420072006f00770073006500310100000000ffffffff0000011300ffffff000000000000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings/></tab_browse><tab_sql><sql name="SQL 1*">-- Backup the original tables (optional but recommended)
+CREATE TABLE leads_backup AS SELECT * FROM leads;
+CREATE TABLE customers_backup AS SELECT * FROM customers;
+
+-- Drop the original tables (after backup)
+DROP TABLE leads;
+
+-- Recreate leads table with new constraints
+CREATE TABLE leads (
+    employeeLeadId TEXT PRIMARY KEY,
+    employeeId TEXT,
+    employeeName TEXT,
+    employeeContactNo TEXT,
+    customerId TEXT,
+    customerName TEXT,
+    customerContactNo TEXT,
+    currentAddress TEXT,
+    desiredDestination TEXT,
+    status TEXT NOT NULL CHECK(&quot;status&quot; IN ('Pending', 'Contacted', 'Not interested', 'Qoutation', 'Group Trip', 'Refund', 'Confirmed')),
+    source TEXT NOT NULL CHECK(&quot;source&quot; IN ('Facebook', 'WhatsApp', 'Reference', 'TikTok', 'Instagram', 'Lead Form', 'Other')),
+    amountClosed REAL,
+    createdAt TEXT,
+    updatedAt TEXT
+);
+
+
+
+-- Migrate data from backup to new leads table with status and source updates
+INSERT INTO leads (employeeLeadId, employeeId, employeeName, employeeContactNo, customerId, customerName, customerContactNo, currentAddress, desiredDestination, status, source, amountClosed, createdAt, updatedAt)
+SELECT 
+    employeeLeadId, 
+    employeeId, 
+    employeeName, 
+    employeeContactNo, 
+    customerId, 
+    customerName, 
+    customerContactNo, 
+    currentAddress, 
+    desiredDestination,
+    CASE status
+        WHEN 'Lost' THEN 'Not interested'
+        WHEN 'Willing' THEN 'Qoutation'
+        WHEN 'Paid' THEN 'Group Trip'
+        ELSE status
+    END AS status,
+    CASE 
+        WHEN source NOT IN ('Facebook', 'WhatsApp', 'Reference', 'TikTok', 'Instagram', 'Lead Form', 'Other') THEN 'Other'
+        ELSE source
+    END AS source,
+    amountClosed,
+    createdAt,
+    updatedAt
+FROM leads_backup;
+
+
+
+-- Drop the backup tables
+DROP TABLE leads_backup;</sql><current_tab id="0"/></tab_sql></sqlb_project>

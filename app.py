@@ -33,6 +33,51 @@ def init_db():
                 createdAt TEXT DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        # Create employees table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS employees (
+                empId TEXT PRIMARY KEY,
+                empName TEXT NOT NULL,
+                phoneNo TEXT,
+                targetAmount REAL,
+                achievedAmount REAL DEFAULT 0,
+                createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+                updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        # Create customers table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS customers (
+                customerId TEXT PRIMARY KEY,
+                customerName TEXT NOT NULL,
+                phone TEXT,
+                status TEXT,
+                source TEXT,
+                currentLocation TEXT,
+                desiredDestination TEXT,
+                dateOfArrival TEXT,
+                createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        # Create leads table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS leads (
+                employeeLeadId TEXT PRIMARY KEY,
+                employeeId TEXT,
+                employeeName TEXT,
+                employeeContactNo TEXT,
+                customerId TEXT,
+                customerName TEXT,
+                customerContactNo TEXT,
+                currentAddress TEXT,
+                desiredDestination TEXT,
+                status TEXT,
+                source TEXT,
+                amountClosed REAL DEFAULT 0,
+                createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+                updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
         # Create logs table if not exists
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS logs (
@@ -366,7 +411,7 @@ def index():
     return render_template('base.html')
 
 @app.route('/profile')
-@login_required  # Assuming a valid login decorator
+@login_required
 def profile():
     if session.get('role') != 'employee':
         flash('This page is for employees only', 'danger')
@@ -374,7 +419,7 @@ def profile():
 
     employee = get_employee_details(session['user_id'])
     if not employee:
-        flash('Employee details not found.', 'danger')
+        flash(f'Employee details not found for ID: {session["user_id"]}. Please contact an admin.', 'danger')
         return redirect(url_for('index'))
     
     return render_template('profile.html', employee=employee)
@@ -649,7 +694,7 @@ def employees():
         params.append(filters['start_date'])
 
     if filters['end_date']:
-        query += " AND DATE(created_at) <= ?"
+        query += " AND DATE(createdAt) <= ?"
         params.append(filters['end_date'])
 
     query += f" ORDER BY {sort_by} {sort_order.upper()}"
@@ -983,7 +1028,9 @@ def add_lead():
 
     if request.method == "POST":
         form = request.form
+        lead_id = str(uuid.uuid4())[:8]
         new_values = {
+            'employeeLeadId': lead_id,
             'employeeId': form["employeeId"],
             'customerId': form["customerId"],
             'status': form["status"],
@@ -994,11 +1041,12 @@ def add_lead():
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
                 cursor.execute("""
-                    INSERT INTO employee_leads (
-                        employeeId, customerId, status, currentAddress, 
-                        desiredDestination,source, createdAt, updatedAt
-                    ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+                    INSERT INTO leads (
+                        employeeLeadId, employeeId, customerId, status, currentAddress, 
+                        desiredDestination, source, createdAt, updatedAt
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
                 """, (
+                    lead_id,
                     form["employeeId"],
                     form["customerId"],
                     form["status"],
@@ -1009,9 +1057,8 @@ def add_lead():
                 conn.commit()
         
         # Log the insertion
-        lead_id = cursor.lastrowid  # Note: Assuming employee_leads has an auto-increment ID; adjust if needed
         description = f"Created lead for employee {form['employeeId']} and customer {form['customerId']}"
-        log_change('employee_leads', 'INSERT', lead_id, description, new_values=new_values)
+        log_change('leads', 'INSERT', lead_id, description, new_values=new_values)
 
         flash("Lead created successfully!")
         return redirect(url_for('leads'))
@@ -1329,4 +1376,5 @@ def logs():
 
 if __name__ == '__main__':
     init_db()
+    migrate_db()
     app.run(debug=True)

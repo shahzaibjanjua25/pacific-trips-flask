@@ -90,7 +90,9 @@
             <td>{{ lead.emp_name }}</td>
             {% endif %}
             <td>{{ lead.cust_name }}</td>
-            <td><span class="status-badge {{ lead.status|lower }}">{{ lead.status }}</span></td>
+<td>
+    <span class="status-badge {{ lead.status|lower|replace(' ', '-') }}">{{ lead.status }}</span>
+</td>
             <td>{{ lead.source }}</td>
             <td>{{ lead.currentAddress }}</td>
             <td>{{ lead.desiredDestination }}</td>
@@ -262,7 +264,7 @@ td a:hover {
 .status-badge.contacted { background-color: #f1c40f; }     /* Yellow */
 .status-badge.not-interested { background-color: #e74c3c; }/* Red */
 .status-badge.qoutation { background-color: #6f42c1; }     /* Purple */
-.status-badge.group-trip { background-color: #2ecc71; }    /* Green */
+.status-badge.group-trip { background-color: #e40f0c; }
 .status-badge.refund { background-color: #95a5a6; }        /* Gray */
 .status-badge.confirmed { background-color: #27ae60; }     /* Dark Green */
 /* Responsive */
