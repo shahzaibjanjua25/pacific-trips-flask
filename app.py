@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import os
 import uuid
@@ -20,6 +21,35 @@ def get_db_connection():
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
 
+def init_db():
+    with closing(get_db_connection()) as conn:
+        cursor = conn.cursor()
+        # Create users table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                employeeId TEXT PRIMARY KEY,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL CHECK (role IN ('admin', 'employee')),
+                createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        # Create logs table if not exists
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS logs (
+                log_id TEXT PRIMARY KEY,
+                table_name TEXT NOT NULL,
+                action TEXT NOT NULL,
+                record_id TEXT NOT NULL,
+                description TEXT,
+                old_values TEXT,
+                new_values TEXT,
+                created_at TEXT NOT NULL,
+                changed_by TEXT,
+                lead_employee TEXT
+            )
+        ''')
+        conn.commit()
+
 def get_all_employees():
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
@@ -31,12 +61,14 @@ def get_all_customers():
         with closing(conn.cursor()) as cursor:
             cursor.execute("SELECT customerId, customerName FROM customers")
             return cursor.fetchall()
+
+def get_employee_details(emp_id):
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute("SELECT * FROM employees WHERE empId = ?", (emp_id,))
+            return cursor.fetchone()
+
 def generate_status_chart(chart_data):
-    """
-    Convert the chart data from Flask to a format suitable for Python charting libraries.
-    Returns data structured for either Matplotlib or Plotly.
-    """
-    # Status colors mapping
     status_colors = {
         'Pending': '#3498db',
         'Contacted': '#f1c40f',
@@ -46,15 +78,12 @@ def generate_status_chart(chart_data):
         'Refund': '#95a5a6'
     }
 
-    # Process the data similar to the JavaScript version
     processed_data = {
-        'labels': [],  # Dates
-        'datasets': []  # Employee status data
+        'labels': [],
+        'datasets': []
     }
 
-    # Temporary storage for employee-status combinations
     temp_data = {}
-
     for date, employees_data in chart_data.items():
         processed_data['labels'].append(date)
         
@@ -70,17 +99,13 @@ def generate_status_chart(chart_data):
                         'employee_name': employee_info['name'],
                         'status': status
                     }
-                # Update the count for this date
                 temp_data[key]['data'][-1] = count
 
-    # Add datasets to the main structure
     for dataset in temp_data.values():
         processed_data['datasets'].append(dataset)
 
     return processed_data
 
-
-# Example usage with Plotly
 def create_plotly_chart(chart_data):
     processed_data = generate_status_chart(chart_data)
     
@@ -111,8 +136,6 @@ def create_plotly_chart(chart_data):
     
     return fig
 
-
-# Example usage with Matplotlib
 def create_matplotlib_chart(chart_data):
     processed_data = generate_status_chart(chart_data)
     
@@ -124,7 +147,6 @@ def create_matplotlib_chart(chart_data):
     dates = processed_data['labels']
     x = np.arange(len(dates))
     
-    # Track cumulative heights for stacking
     cumulative = np.zeros(len(dates))
     
     for dataset in processed_data['datasets']:
@@ -147,6 +169,7 @@ def create_matplotlib_chart(chart_data):
     
     plt.tight_layout()
     return fig
+
 def get_filtered_sorted_leads(employee_id, customer_id, status, start_date, source, end_date, sort_by, sort_order):
     query = '''
         SELECT leads.*, 
@@ -207,6 +230,7 @@ def log_change(table_name, action, record_id, description, old_values=None, new_
                 lead_employee
             ))
             conn.commit()
+
 def migrate_db():
     with closing(get_db_connection()) as conn:
         cursor = conn.cursor()
@@ -217,12 +241,130 @@ def migrate_db():
         except sqlite3.OperationalError as e:
             if "duplicate column name" not in str(e):
                 raise
+
+# Authentication middleware
+def login_required(f):
+    def wrap(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please login first.', 'danger')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    wrap.__name__ = f.__name__
+    return wrap
+
+def admin_required(f):
+    def wrap(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please login first.', 'danger')
+            return redirect(url_for('login'))
+        if session.get('role') != 'admin':
+            flash('Admin access required.', 'danger')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    wrap.__name__ = f.__name__
+    return wrap
+
+def employee_required(f):
+    def wrap(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please login first.', 'danger')
+            return redirect(url_for('login'))
+        if session.get('role') != 'employee':
+            flash('Employee access required.', 'danger')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    wrap.__name__ = f.__name__
+    return wrap
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        employee_id = request.form['employeeId']
+        password = request.form['password']
+        
+        with closing(get_db_connection()) as conn:
+            with closing(conn.cursor()) as cursor:
+                # Check if employee exists
+                cursor.execute("SELECT empId, empName FROM employees WHERE empId = ?", (employee_id,))
+                employee = cursor.fetchone()
+                
+                if not employee:
+                    flash('Invalid Employee ID.', 'danger')
+                    return redirect(url_for('register'))
+                
+                # Check if employee is already registered
+                cursor.execute("SELECT employeeId FROM users WHERE employeeId = ?", (employee_id,))
+                if cursor.fetchone():
+                    flash('Employee ID already registered.', 'danger')
+                    return redirect(url_for('register'))
+                
+                # Register employee
+                password_hash = generate_password_hash(password)
+                cursor.execute('''
+                    INSERT INTO users (employeeId, password_hash, role)
+                    VALUES (?, ?, 'employee')
+                ''', (employee_id, password_hash))
+                conn.commit()
+                
+                flash('Registration successful! Please login.', 'success')
+                return redirect(url_for('login'))
+    
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        employee_id = request.form['employeeId']
+        password = request.form['password']
+        
+        with closing(get_db_connection()) as conn:
+            with closing(conn.cursor()) as cursor:
+                # Check if user exists
+                cursor.execute("SELECT * FROM users WHERE employeeId = ?", (employee_id,))
+                user = cursor.fetchone()
+                
+                if user and check_password_hash(user['password_hash'], password):
+                    session['user_id'] = user['employeeId']
+                    session['role'] = user['role']
+                    employee = get_employee_details(user['employeeId'])
+                    session['user_name'] = employee['empName'] if employee else 'Admin'
+                    flash('Login successful!', 'success')
+                    return redirect(url_for('index'))
+                else:
+                    flash('Invalid credentials.', 'danger')
+                    return redirect(url_for('login'))
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    session.pop('role', None)
+    session.pop('user_name', None)
+    flash('Logged out successfully.', 'success')
+    return redirect(url_for('login'))
+
 @app.route('/')
+@login_required
 def index():
     return render_template('base.html')
 
+@app.route('/profile')
+@employee_required
+def profile():
+    employee = get_employee_details(session['user_id'])
+    if not employee:
+        flash('Employee details not found.', 'danger')
+        return redirect(url_for('index'))
+    return render_template('profile.html', employee=employee)
+
 @app.route('/customers')
+@login_required
 def customers():
+    if session.get('role') == 'employee':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('index'))
+    
     filters = {
         "customerName": request.args.get("customerName", ""),
         "phone": request.args.get("phone", ""),
@@ -264,7 +406,7 @@ def customers():
                     cursor.execute(f"SELECT DISTINCT {col} FROM customers ORDER BY {col}")
                     column_values[col] = [row[0] for row in cursor.fetchall() if row[0]]
                 else:
-                    column_values[col] = []  # No dropdown for dates
+                    column_values[col] = []
 
     return render_template("customers.html",
                          customers=customers,
@@ -273,8 +415,8 @@ def customers():
                          sort_order=sort_order,
                          column_values=column_values)
 
-
 @app.route('/add_customer', methods=['GET', 'POST'])
+@admin_required
 def add_customer():
     if request.method == 'POST':
         new_id = str(uuid.uuid4())[:8]
@@ -307,9 +449,8 @@ def add_customer():
                 ))
                 conn.commit()
         
-        # Log the insertion
         description = f"Added customer {form['customerName']} with ID {new_id}"
-        log_change('customers', 'INSERT', new_id, description, new_values=new_values)
+        log_change('customers', 'INSERT', new_id, description, new_values=new_values, changed_by=session['user_id'])
         
         flash("Customer added!", "success")
         return redirect(url_for('customers'))
@@ -317,6 +458,7 @@ def add_customer():
     return render_template('add_customer.html')
 
 @app.route('/customers/edit/<string:customer_id>', methods=['GET', 'POST'])
+@admin_required
 def edit_customer(customer_id):
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
@@ -329,7 +471,7 @@ def edit_customer(customer_id):
 
     if request.method == 'POST':
         form = request.form
-        old_values = dict(customer)  # Convert SQLite Row to dict
+        old_values = dict(customer)
         new_values = {
             'customerName': form['customerName'],
             'phone': form['phone'],
@@ -376,10 +518,9 @@ def edit_customer(customer_id):
                 
                 conn.commit()
 
-        # Log the update
         changes = [f"{key} from '{old_values[key]}' to '{new_values[key]}'" for key in new_values if old_values[key] != new_values[key]]
         description = f"Updated customer {form['customerName']} (ID: {customer_id}): {', '.join(changes)}" if changes else f"No changes to customer {form['customerName']} (ID: {customer_id})"
-        log_change('customers', 'UPDATE', customer_id, description, old_values=old_values, new_values=new_values)
+        log_change('customers', 'UPDATE', customer_id, description, old_values=old_values, new_values=new_values, changed_by=session['user_id'])
 
         flash("Customer and related leads updated!", "info")
         return redirect(url_for('customers'))
@@ -387,6 +528,7 @@ def edit_customer(customer_id):
     return render_template('edit_customer.html', customer=customer)
 
 @app.route('/customers/delete/<string:customer_id>')
+@admin_required
 def delete_customer(customer_id):
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
@@ -397,9 +539,8 @@ def delete_customer(customer_id):
                 cursor.execute("DELETE FROM customers WHERE customerId = ?", (customer_id,))
                 conn.commit()
                 
-                # Log the deletion
                 description = f"Deleted customer {customer['customerName']} (ID: {customer_id})"
-                log_change('customers', 'DELETE', customer_id, description, old_values=old_values)
+                log_change('customers', 'DELETE', customer_id, description, old_values=old_values, changed_by=session['user_id'])
                 
                 flash("Customer deleted!", "success")
             else:
@@ -407,6 +548,7 @@ def delete_customer(customer_id):
     return redirect(url_for('customers'))
 
 @app.route('/employees')
+@admin_required
 def employees():
     filters = {
         'empName': request.args.get('empName', ''),
@@ -455,6 +597,7 @@ def employees():
                          column_values=column_values)
 
 @app.route('/employee/add', methods=['GET', 'POST'])
+@admin_required
 def add_employee():
     if request.method == 'POST':
         empId = str(uuid.uuid4())[:8]
@@ -481,9 +624,8 @@ def add_employee():
                 ))
                 conn.commit()
         
-        # Log the insertion
         description = f"Added employee {form['empName']} with ID {empId}"
-        log_change('employees', 'INSERT', empId, description, new_values=new_values)
+        log_change('employees', 'INSERT', empId, description, new_values=new_values, changed_by=session['user_id'])
         
         flash(f"Employee added! ID: {empId}", "success")
         return redirect(url_for('employees'))
@@ -492,6 +634,7 @@ def add_employee():
     return render_template('add_employee.html', empId=preview_emp_id)
 
 @app.route('/employee/edit/<string:emp_id>', methods=['GET', 'POST'])
+@admin_required
 def edit_employee(emp_id):
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
@@ -526,10 +669,9 @@ def edit_employee(emp_id):
                 ))
                 conn.commit()
         
-        # Log the update
         changes = [f"{key} from '{old_values[key]}' to '{new_values[key]}'" for key in new_values if old_values[key] != new_values[key]]
         description = f"Updated employee {form['empName']} (ID: {emp_id}): {', '.join(changes)}" if changes else f"No changes to employee {form['empName']} (ID: {emp_id})"
-        log_change('employees', 'UPDATE', emp_id, description, old_values=old_values, new_values=new_values)
+        log_change('employees', 'UPDATE', emp_id, description, old_values=old_values, new_values=new_values, changed_by=session['user_id'])
         
         flash("Employee updated!", "info")
         return redirect(url_for('employees'))
@@ -537,6 +679,7 @@ def edit_employee(emp_id):
     return render_template('edit_employee.html', employee=employee)
 
 @app.route('/employee/delete/<string:emp_id>')
+@admin_required
 def delete_employee(emp_id):
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
@@ -547,9 +690,8 @@ def delete_employee(emp_id):
                 cursor.execute("DELETE FROM employees WHERE empId = ?", (emp_id,))
                 conn.commit()
                 
-                # Log the deletion
                 description = f"Deleted employee {employee['empName']} (ID: {emp_id})"
-                log_change('employees', 'DELETE', emp_id, description, old_values=old_values)
+                log_change('employees', 'DELETE', emp_id, description, old_values=old_values, changed_by=session['user_id'])
                 
                 flash("Employee deleted!", "success")
             else:
@@ -557,9 +699,10 @@ def delete_employee(emp_id):
     return redirect(url_for('employees'))
 
 @app.route('/leads', methods=['GET'])
+@login_required
 def leads():
     filters = {
-        "employeeId": request.args.get('employeeId', ''),
+        "employeeId": session['user_id'] if session['role'] == 'employee' else request.args.get('employeeId', ''),
         "customerId": request.args.get('customerId', ''),
         "status": request.args.get('status', ''),
         "source": request.args.get('source', ''),
@@ -581,7 +724,7 @@ def leads():
         sort_order
     )
             
-    employees = get_all_employees()
+    employees = get_all_employees() if session['role'] == 'admin' else []
     customers = get_all_customers()
 
     return render_template("leads.html", 
@@ -595,6 +738,7 @@ def leads():
                          })
 
 @app.route('/leads/add', methods=['GET', 'POST'])
+@admin_required
 def add_lead():
     if request.method == 'POST':
         form = request.form
@@ -604,7 +748,6 @@ def add_lead():
 
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
-                # ✅ Check if customer is already assigned to any lead
                 cursor.execute("SELECT COUNT(*) FROM leads WHERE customerId = ?", (customer_id,))
                 count = cursor.fetchone()[0]
 
@@ -612,7 +755,6 @@ def add_lead():
                     flash("This customer is already assigned to another lead!", "danger")
                     return redirect(url_for('add_lead'))
 
-                # ✅ Continue with adding the lead if not already assigned
                 cursor.execute("""
                     SELECT empId, empName, phoneNo, achievedAmount 
                     FROM employees 
@@ -664,7 +806,6 @@ def add_lead():
 
                 conn.commit()
 
-        # Log the insertion
         new_values = {
             'employeeLeadId': lead_id,
             'employeeId': form['employeeId'],
@@ -676,7 +817,7 @@ def add_lead():
             'amountClosed': amount_closed if form['status'] == 'Confirmed' else 0
         }
         description = f"Added lead {lead_id} for employee {employee['empName']} and customer {customer['customerName']}"
-        log_change('leads', 'INSERT', lead_id, description, new_values=new_values)
+        log_change('leads', 'INSERT', lead_id, description, new_values=new_values, changed_by=session['user_id'])
 
         flash("Lead added successfully!", "success")
         return redirect(url_for('leads'))
@@ -685,8 +826,8 @@ def add_lead():
                            employees=get_all_employees(),
                            customers=get_all_customers())
 
-
 @app.route('/leads/edit/<string:lead_id>', methods=['GET', 'POST'])
+@admin_required
 def edit_lead(lead_id):
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
@@ -710,20 +851,16 @@ def edit_lead(lead_id):
 
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
-                # Get current employee's achieved amount
                 cursor.execute("SELECT achievedAmount FROM employees WHERE empId = ?", (lead['employeeId'],))
                 old_emp = cursor.fetchone()
                 
-                # Get new employee's details
                 cursor.execute("SELECT empName, phoneNo, achievedAmount FROM employees WHERE empId = ?", (new_emp_id,))
                 new_emp = cursor.fetchone()
 
-                # Get customer details
                 cursor.execute("""SELECT customerName, phone, currentLocation, desiredDestination, source, status 
                                 FROM customers WHERE customerId = ?""", (new_cust_id,))
                 new_cust = cursor.fetchone()
 
-                # Handle amount changes if employee changed
                 if lead['employeeId'] != new_emp_id:
                     if lead['status'] == 'Confirmed' and old_emp:
                         new_achieved_old = old_emp['achievedAmount'] - prev_amount
@@ -753,7 +890,6 @@ def edit_lead(lead_id):
                     if new_emp:
                         cursor.execute("UPDATE employees SET achievedAmount = ? WHERE empId = ?", (achieved, new_emp_id))
 
-                # Update the lead
                 cursor.execute("""
                     UPDATE leads
                     SET employeeId = ?, employeeName = ?, employeeContactNo = ?,
@@ -777,7 +913,6 @@ def edit_lead(lead_id):
                     lead_id
                 ))
 
-                # Update customer if needed
                 if new_cust_id:
                     cursor.execute("""
                         UPDATE customers
@@ -796,10 +931,7 @@ def edit_lead(lead_id):
 
                 conn.commit()
 
-        # Get the lead's original employee for logging
         lead_employee = lead['employeeId']
-        
-        # Prepare description for log
         new_values = {
             'employeeId': new_emp_id,
             'customerId': new_cust_id,
@@ -816,12 +948,9 @@ def edit_lead(lead_id):
         description = (f"Updated lead {lead_id}: {', '.join(changes)}" 
                       if changes else f"No changes to lead {lead_id}")
         
-        # Log the change with the lead's original employee
-        # Note: In a real app, current_user_id would come from your auth system
-        current_user_id = "current_user_id_placeholder"  
         log_change('leads', 'UPDATE', lead_id, description, 
                   old_values=old_values, new_values=new_values,
-                  changed_by=current_user_id,
+                  changed_by=session['user_id'],
                   lead_employee=lead_employee)
 
         flash("Lead and linked customer/employee updated!", "info")
@@ -831,26 +960,9 @@ def edit_lead(lead_id):
                          lead=dict(lead),
                          employees=get_all_employees(),
                          customers=get_all_customers())
-def init_db():
-    with closing(get_db_connection()) as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS logs (
-                log_id TEXT PRIMARY KEY,
-                table_name TEXT NOT NULL,
-                action TEXT NOT NULL,
-                record_id TEXT NOT NULL,
-                description TEXT,
-                old_values TEXT,
-                new_values TEXT,
-                created_at TEXT NOT NULL,
-                changed_by TEXT,
-                lead_employee TEXT
-            )
-        ''')
-        conn.commit()
 
 @app.route('/leads/delete/<string:lead_id>')
+@admin_required
 def delete_lead(lead_id):
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
@@ -861,9 +973,8 @@ def delete_lead(lead_id):
                 cursor.execute("DELETE FROM leads WHERE employeeLeadId = ?", (lead_id,))
                 conn.commit()
                 
-                # Log the deletion
                 description = f"Deleted lead {lead_id}"
-                log_change('leads', 'DELETE', lead_id, description, old_values=old_values)
+                log_change('leads', 'DELETE', lead_id, description, old_values=old_values, changed_by=session['user_id'])
                 
                 flash("Lead deleted!", "success")
             else:
@@ -871,6 +982,7 @@ def delete_lead(lead_id):
     return redirect(url_for('leads'))
 
 @app.route("/leads/create", methods=["GET", "POST"])
+@admin_required
 def create_lead():
     employees = get_all_employees()
     customers = get_all_customers()
@@ -902,25 +1014,24 @@ def create_lead():
                 ))
                 conn.commit()
         
-        # Log the insertion
-        lead_id = cursor.lastrowid  # Note: Assuming employee_leads has an auto-increment ID; adjust if needed
+        lead_id = cursor.lastrowid
         description = f"Created lead for employee {form['employeeId']} and customer {form['customerId']}"
-        log_change('employee_leads', 'INSERT', lead_id, description, new_values=new_values)
+        log_change('employee_leads', 'INSERT', lead_id, description, new_values=new_values, changed_by=session['user_id'])
         
         flash("Lead created successfully!")
         return redirect(url_for('leads'))
 
     return render_template("create_lead.html", employees=employees, customers=customers)
+
 @app.route('/status_tracking', methods=['GET'])
+@admin_required
 def status_tracking():
-    # Get filters from request
     filters = {
         'employee_id': request.args.get('employee_id', ''),
         'start_date': request.args.get('start_date', ''),
         'end_date': request.args.get('end_date', '')
     }
 
-    # Build query for actual status changes (status before != status after)
     query = """
         SELECT 
             strftime('%Y-%m-%d', created_at) AS date,
@@ -947,17 +1058,14 @@ def status_tracking():
 
     query += " GROUP BY date, new_status ORDER BY date"
 
-    # Execute query
     with closing(get_db_connection()) as conn:
         cursor = conn.cursor()
         cursor.execute(query, params)
         status_data = cursor.fetchall()
 
-        # Get employees for dropdown
         cursor.execute("SELECT empId, empName FROM employees")
         employees = cursor.fetchall()
 
-    # Prepare data for chart
     chart_data = {}
     for row in status_data:
         date = row['date']
@@ -974,9 +1082,8 @@ def status_tracking():
                            filters=filters)
 
 @app.route('/status_changes')
+@admin_required
 def status_changes():
-    """Display lead status changes with pie chart visualization."""
-    # Get filters from request
     filters = {
         'employee_id': request.args.get('employee_id', ''),
         'start_date': request.args.get('start_date', ''),
@@ -984,7 +1091,6 @@ def status_changes():
         'status': request.args.get('status', '')
     }
 
-    # Build query for actual status changes only
     query = """
         SELECT 
             json_extract(new_values, '$.status') AS status,
@@ -1015,17 +1121,14 @@ def status_changes():
 
     query += " GROUP BY status, employee_id"
 
-    # Execute query
     with closing(get_db_connection()) as conn:
         cursor = conn.cursor()
         cursor.execute(query, params)
         status_data = cursor.fetchall()
 
-        # Get employee names mapping
         cursor.execute("SELECT empId, empName FROM employees")
         employee_names = {row['empId']: row['empName'] for row in cursor.fetchall()}
 
-        # Get unique statuses for dropdown
         cursor.execute("""
             SELECT DISTINCT json_extract(new_values, '$.status') AS status
             FROM logs
@@ -1036,9 +1139,6 @@ def status_changes():
         """)
         statuses = [row['status'] for row in cursor.fetchall() if row['status']]
 
-
-    # Prepare data structures
-    from collections import defaultdict
     status_counts = defaultdict(int)
     employee_status_counts = defaultdict(lambda: {'name': '', 'statuses': defaultdict(int)})
 
@@ -1056,7 +1156,6 @@ def status_changes():
     status_counts = dict(status_counts)
     employee_status_counts = dict(employee_status_counts)
 
-    # Generate pie chart
     def generate_pie_chart(status_data):
         if not status_data:
             return "<div class='no-data'>No status changes found for the selected filters</div>"
@@ -1064,13 +1163,13 @@ def status_changes():
         import plotly.graph_objects as go
 
         status_colors = {
-        'Pending': '#3498db',
-        'Contacted': '#f1c40f',
-        'Paid': '#9b59b6',
-        'Confirmed': '#27ae60',
-        'Lost': '#e74c3c',
-        'Refund': '#95a5a6'
-    }
+            'Pending': '#3498db',
+            'Contacted': '#f1c40f',
+            'Paid': '#9b59b6',
+            'Confirmed': '#27ae60',
+            'Lost': '#e74c3c',
+            'Refund': '#95a5a6'
+        }
 
         labels = list(status_data.keys())
         values = list(status_data.values())
@@ -1105,18 +1204,16 @@ def status_changes():
                            employee_status_counts=employee_status_counts)
 
 @app.route('/dashboard')
+@admin_required
 def dashboard():
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
-            # Leads by Status
             cursor.execute('SELECT status, COUNT(*) as count FROM leads GROUP BY status')
             leads_by_status = [dict(row) for row in cursor.fetchall()]
             
-            # Leads by Source (corrected query)
             cursor.execute('SELECT source, COUNT(*) as count FROM leads GROUP BY source')
             leads_by_source = [dict(row) for row in cursor.fetchall()]
             
-            # Leads by Date (optional)
             cursor.execute('''
                 SELECT DATE(createdAt) as date, COUNT(*) as count 
                 FROM leads 
@@ -1125,7 +1222,6 @@ def dashboard():
             ''')
             leads_by_date = [dict(row) for row in cursor.fetchall()]
             
-            # Total counts
             cursor.execute('SELECT COUNT(*) FROM customers')
             total_customers = cursor.fetchone()[0]
             cursor.execute('SELECT COUNT(*) FROM employees')
@@ -1140,7 +1236,9 @@ def dashboard():
                          total_customers=total_customers,
                          total_employees=total_employees,
                          total_leads=total_leads)
+
 @app.route('/logs', methods=['GET'])
+@admin_required
 def logs():
     filters = {
         'table_name': request.args.get('table_name', ''),
@@ -1176,7 +1274,6 @@ def logs():
             cursor.execute(query, params)
             logs = cursor.fetchall()
             
-            # Get distinct values for filters
             cursor.execute("SELECT DISTINCT table_name FROM logs")
             table_names = [row['table_name'] for row in cursor.fetchall()]
             cursor.execute("SELECT DISTINCT action FROM logs")
@@ -1189,4 +1286,5 @@ def logs():
                          actions=actions)
 
 if __name__ == '__main__':
+    init_db()
     app.run(debug=True)
