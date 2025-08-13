@@ -3,77 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EMS Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Pacific Trips Employee Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='customers.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='employees.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='add form.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('index') }}">EMS Dashboard</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+    <!-- Header with Brand and Toggle Button -->
+    <header class="header">
+        <div class="header-left">
+            <button class="menu-toggle" aria-label="Toggle Sidebar">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    {% if session.user_id %}
-                        {% if session.role == 'admin' %}
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">Dashboard</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.endpoint == 'customers' %}active{% endif %}" href="{{ url_for('customers') }}">Customers</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.endpoint == 'employees' %}active{% endif %}" href="{{ url_for('employees') }}">Employees</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.endpoint == 'leads' %}active{% endif %}" href="{{ url_for('leads') }}">Leads</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.endpoint == 'status_changes' %}active{% endif %}" href="{{ url_for('status_changes') }}">Status Changes</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.endpoint == 'status_tracking' %}active{% endif %}" href="{{ url_for('status_tracking') }}">Status Tracking</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.endpoint == 'logs' %}active{% endif %}" href="{{ url_for('logs') }}">Logs</a>
-                            </li>
-                        {% elif session.role == 'employee' %}
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.endpoint == 'leads' %}active{% endif %}" href="{{ url_for('leads') }}">Leads</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}" href="{{ url_for('profile') }}">Profile</a>
-                            </li>
-                        {% endif %}
-                    {% endif %}
-                </ul>
-                {% if session.user_id %}
-                    <span class="navbar-text me-3">Welcome, {{ session.user_name }}</span>
-                    <a class="btn btn-outline-primary" href="{{ url_for('logout') }}">Logout</a>
-                {% else %}
-                    <a class="btn btn-outline-primary me-2" href="{{ url_for('login') }}">Login</a>
-                    <a class="btn btn-outline-primary" href="{{ url_for('register') }}">Register</a>
-                {% endif %}
-            </div>
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <img src="{{ url_for('static', filename='logo.png') }}" class="logo" alt="EMS Logo">
+                EMS Dashboard
+            </a>
         </div>
-    </nav>
+        {% if session.user_id %}
+            <div class="header-right">
+                <span class="navbar-text">Welcome, {{ session.user_name }}</span>
+                <a class="btn btn-outline-primary" href="{{ url_for('logout') }}">Logout</a>
+            </div>
+        {% else %}
+            <div class="header-right">
+                <a class="btn btn-outline-primary me-2" href="{{ url_for('login') }}">Login</a>
+                <a class="btn btn-outline-primary" href="{{ url_for('register') }}">Register</a>
+            </div>
+        {% endif %}
+    </header>
 
-    <div class="container mt-4">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        {% block content %}
-        {% endblock %}
+    <!-- Layout Container -->
+    <div class="layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <ul class="nav flex-column">
+                {% if session.user_id %}
+                    {% if session.role == 'admin' %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'customers' %}active{% endif %}" href="{{ url_for('customers') }}">Customers</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'employees' %}active{% endif %}" href="{{ url_for('employees') }}">Employees</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'leads' %}active{% endif %}" href="{{ url_for('leads') }}">Leads</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'status_changes' %}active{% endif %}" href="{{ url_for('status_changes') }}">Status Changes</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'logs' %}active{% endif %}" href="{{ url_for('logs') }}">Logs</a>
+                        </li>
+                    {% elif session.role == 'employee' %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'leads' %}active{% endif %}" href="{{ url_for('leads') }}">Leads</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}" href="{{ url_for('profile') }}">Profile</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+            </ul>
+        </nav>
+
+        <!-- Overlay for Mobile Sidebar -->
+        <div class="overlay"></div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                {% block content %}
+                {% endblock %}
+            </div>
+        </main>
     </div>
 
+    <footer class="footer">
+        &copy; {{ current_year }} Pacific Trips Employee Management System
+    </footer>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Sidebar Toggle Script
+        document.querySelector('.menu-toggle').addEventListener('click', () => {
+            document.querySelector('.sidebar').classList.toggle('sidebar-closed');
+            document.querySelector('.overlay').classList.toggle('active');
+            document.body.classList.toggle('sidebar-open');
+        });
+
+        // Close Sidebar when Overlay is Clicked
+        document.querySelector('.overlay').addEventListener('click', () => {
+            document.querySelector('.sidebar').classList.add('sidebar-closed');
+            document.querySelector('.overlay').classList.remove('active');
+            document.body.classList.remove('sidebar-open');
+        });
+
+        // Close Sidebar when a link is clicked on mobile
+        document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 991.98) {
+                    document.querySelector('.sidebar').classList.add('sidebar-closed');
+                    document.querySelector('.overlay').classList.remove('active');
+                    document.body.classList.remove('sidebar-open');
+                }
+            });
+        });
+    </script>
 </body>
 </html>

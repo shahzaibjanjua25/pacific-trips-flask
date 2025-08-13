@@ -8,6 +8,7 @@ import json
 from datetime import datetime
 from collections import defaultdict
 
+
 app = Flask(__name__)
 app.secret_key = 'your-secret-key'
 
@@ -1076,7 +1077,7 @@ def status_tracking():
             chart_data[date] = {}
         chart_data[date][status] = count
 
-    return render_template('status_tracking.html',
+    return render_template('status_changes_pie.html',
                            chart_data=chart_data,
                            employees=employees,
                            filters=filters)

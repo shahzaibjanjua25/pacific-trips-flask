@@ -56,5 +56,164 @@
         <a href="{{ url_for('customers') }}" class="btn">Cancel</a>
     </div>
 </form>
+<style>/* Form Container */
+form {
+    max-width: 600px;
+    margin: 2rem auto;
+    background-color: #ffffff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
 
+/* Form Heading */
+h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+/* Form Group Styling */
+form div {
+    margin-bottom: 1.25rem;
+}
+
+/* Label Styling */
+label {
+    display: block;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #34495e;
+    margin-bottom: 0.5rem;
+}
+
+/* Input and Select Styling */
+input[type="text"],
+input[type="date"],
+select {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input[type="text"]:focus,
+input[type="date"]:focus,
+select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    outline: none;
+}
+
+/* Required Field Indicator */
+input:required,
+select:required {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='%23dc3545' d='M4 0L0 4l4 4 4-4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 8px;
+}
+
+/* Form Buttons Container */
+.form-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+/* Button Styling */
+.btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn[type="submit"] {
+    background-color: #007bff;
+    color: #ffffff;
+    border: 1px solid #007bff;
+}
+
+.btn[type="submit"]:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.btn[href] {
+    background-color: #6c757d;
+    color: #ffffff;
+    border: 1px solid #6c757d;
+}
+
+.btn[href]:hover {
+    background-color: #5a6268;
+    border-color: #5a6268;
+}
+
+/* Responsive Design */
+@media (max-width: 576px) {
+    form {
+        padding: 1.5rem;
+        margin: 1rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    label {
+        font-size: 0.95rem;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    select {
+        font-size: 0.9rem;
+        padding: 0.65rem;
+    }
+
+    .form-buttons {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 0.65rem;
+        font-size: 0.95rem;
+    }
+}
+
+/* Accessibility Improvements */
+:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+label:focus-within {
+    color: #007bff;
+}
+
+/* Error State for Invalid Inputs */
+input:invalid,
+select:invalid {
+    border-color: #dc3545;
+}
+
+input:invalid:focus,
+select:invalid:focus {
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}</style>
 {% endblock %}
