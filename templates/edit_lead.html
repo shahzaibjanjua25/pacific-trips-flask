@@ -33,7 +33,7 @@
             <div class="form-group">
                 <label for="status">Status:</label>
                 <select name="status" id="status" required onchange="checkStatusChange()">
-                    {% for s in ['Pending', 'Contacted', 'Lost', 'Willing', 'Paid', 'Refund', 'Confirmed'] %}
+                    {% for s in ['Pending', 'Contacted', 'Not interested', 'Qoutation', 'Group Trip',  'Refund', 'Confirmed'] %}
                     <option value="{{ s }}" {% if s == lead.status %}selected{% endif %}>{{ s }}</option>
                     {% endfor %}
                 </select>
@@ -42,7 +42,7 @@
             <div class="form-group">
                 <label for="source">Source:</label>
                 <select name="source" id="source" required>
-                    {% for s in ['Facebook', 'WhatsApp', 'Reference', 'TikTok', 'Other'] %}
+                    {% for s in ['Facebook', 'WhatsApp', 'Reference', 'TikTok','Instagram','Lead Form',  'Other'] %}
                     <option value="{{ s }}" {% if s == lead.source %}selected{% endif %}>{{ s }}</option>
                     {% endfor %}
                 </select>

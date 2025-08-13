@@ -75,12 +75,13 @@ def generate_status_chart(chart_data):
     """
     # Status colors mapping
     status_colors = {
-        'Pending': '#3498db',
-        'Contacted': '#f1c40f',
-        'Paid': '#9b59b6',
-        'Confirmed': '#27ae60',
-        'Lost': '#e74c3c',
-        'Refund': '#95a5a6'
+        'Pending': '#3498db',        # Blue
+        'Contacted': '#f1c40f',      # Yellow
+        'Not interested': '#e74c3c', # Red (replacing Lost)
+        'Qoutation': '#6f42c1',      # Purple
+        'Group Trip': '#2ecc71',     # Green
+        'Refund': '#95a5a6',         # Gray
+        'Confirmed': '#27ae60'       # Dark Green
     }
 
     # Process the data similar to the JavaScript version
@@ -184,6 +185,7 @@ def create_matplotlib_chart(chart_data):
     
     plt.tight_layout()
     return fig
+
 def get_filtered_sorted_leads(employee_id, customer_id, status, start_date, source, end_date, sort_by, sort_order):
     query = '''
         SELECT leads.*, 
@@ -203,10 +205,10 @@ def get_filtered_sorted_leads(employee_id, customer_id, status, start_date, sour
         query += ' AND leads.customerId = ?'
         params.append(customer_id)
     if status:
-        query += ' AND leads.status = ?'
+        query += ' AND leads.status IN (?, ?, ?, ?, ?, ?, ?)'
         params.append(status)
     if source:
-        query += ' AND leads.source = ?'
+        query += ' AND leads.source IN (?, ?, ?, ?, ?, ?, ?)'
         params.append(source)
     if start_date:
         query += ' AND DATE(leads.createdAt) >= ?'
@@ -1074,8 +1076,11 @@ def status_tracking():
             chart_data[date] = {}
         chart_data[date][status] = count
 
+    # Generate chart using the updated generate_status_chart function
+    chart = generate_status_chart(chart_data)
+
     return render_template('status_tracking.html',
-                           chart_data=chart_data,
+                           chart_data=chart,  # Pass the processed chart data
                            employees=employees,
                            filters=filters)
 
@@ -1143,7 +1148,6 @@ def status_changes():
         """)
         statuses = [row['status'] for row in cursor.fetchall() if row['status']]
 
-
     # Prepare data structures
     from collections import defaultdict
     status_counts = defaultdict(int)
@@ -1171,12 +1175,13 @@ def status_changes():
         import plotly.graph_objects as go
 
         status_colors = {
-            'Pending': '#3498db',
-            'Contacted': '#f1c40f',
-            'Paid': '#9b59b6',
-            'Confirmed': '#27ae60',
-            'Lost': '#e74c3c',
-            'Refund': '#95a5a6'
+            'Pending': '#3498db',        # Blue
+            'Contacted': '#f1c40f',      # Yellow
+            'Not interested': '#e74c3c', # Red
+            'Qoutation': '#6f42c1',      # Purple
+            'Group Trip': '#2ecc71',     # Green
+            'Refund': '#95a5a6',         # Gray
+            'Confirmed': '#27ae60'       # Dark Green
         }
 
         labels = list(status_data.keys())
@@ -1237,13 +1242,41 @@ def dashboard():
             cursor.execute('SELECT COUNT(*) FROM leads')
             total_leads = cursor.fetchone()[0]
     
+    # Generate chart for leads by status
+    status_counts = {row['status']: row['count'] for row in leads_by_status}
+    status_colors = {
+        'Pending': '#3498db',
+        'Contacted': '#f1c40f',
+        'Not interested': '#e74c3c',
+        'Qoutation': '#6f42c1',
+        'Group Trip': '#2ecc71',
+        'Refund': '#95a5a6',
+        'Confirmed': '#27ae60'
+    }
+
+    chart = {
+        'type': 'pie',
+        'data': {
+            'labels': list(status_counts.keys()),
+            'datasets': [{
+                'data': list(status_counts.values()),
+                'backgroundColor': [status_colors.get(status, '#95a5a6') for status in status_counts.keys()]
+            }]
+        },
+        'options': {
+            'title': {'display': True, 'text': 'Leads by Status'},
+            'legend': {'position': 'right'}
+        }
+    }
+
     return render_template("dashboard.html",
                          leads_by_status=leads_by_status,
                          leads_by_source=leads_by_source,
                          leads_by_date=leads_by_date,
                          total_customers=total_customers,
                          total_employees=total_employees,
-                         total_leads=total_leads)
+                         total_leads=total_leads,
+                         status_chart=chart)
 
 @app.route('/logs', methods=['GET'])
 @admin_required

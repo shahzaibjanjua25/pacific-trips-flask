@@ -37,7 +37,7 @@
     <div>
         <label for="status">Status:</label>
         <select name="status" id="status" required onchange="checkStatusChange()">
-            {% for s in ['Pending', 'Contacted', 'Lost', 'Willing', 'Paid', 'Refund', 'Confirmed'] %}
+            {% for s in ['Pending', 'Contacted', 'Not interested', 'Qoutation', 'Group Trip',  'Refund', 'Confirmed'] %}
             <option value="{{ s }}">{{ s }}</option>
             {% endfor %}
         </select>

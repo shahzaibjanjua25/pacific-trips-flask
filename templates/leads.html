@@ -30,7 +30,7 @@
         <label for="status">Status:</label>
         <select name="status">
             <option value="">All</option>
-            {% for s in ['Pending', 'Contacted', 'Lost', 'Willing', 'Paid', 'Refund', 'Confirmed'] %}
+            {% for s in ['Pending', 'Contacted', 'Not interested', 'Qoutation', 'Group Trip',  'Refund', 'Confirmed'] %}
             <option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ s }}</option>
             {% endfor %}
         </select>
@@ -40,7 +40,7 @@
         <label for="source">Source:</label>
         <select name="source">
             <option value="">All</option>
-            {% for s in ['Facebook', 'WhatsApp', 'Reference', 'TikTok', 'Other'] %}
+            {% for s in ['Facebook', 'WhatsApp', 'Reference', 'TikTok','Instagram', 'Lead Form', 'Other'] %}
             <option value="{{ s }}" {% if filters.source == s %}selected{% endif %}>{{ s }}</option>
             {% endfor %}
         </select>
@@ -219,14 +219,15 @@ th, td {
 }
 
 th {
-    background-color: #f8f9fa;
+    background-color: #0f77df;
     font-weight: 600;
-    color: #2c3e50;
+    color: #f4f6f7;
 }
 
 th a {
-    color: #007bff;
+    color: #f7f8fa;
     text-decoration: none;
+
 }
 
 th a:hover {
@@ -246,7 +247,6 @@ td a {
 td a:hover {
     text-decoration: underline;
 }
-
 /* Status Badge Styling */
 .status-badge {
     padding: 0.4em 0.75em;
@@ -258,14 +258,13 @@ td a:hover {
     text-transform: capitalize;
 }
 
-.status-badge.pending { background-color: #ffc107; }       /* Yellow */
-.status-badge.contacted { background-color: #17a2b8; }     /* Teal Blue */
-.status-badge.lost { background-color: #dc3545; }          /* Red */
-.status-badge.willing { background-color: #6f42c1; }       /* Purple */
-.status-badge.paid { background-color: #28a745; }          /* Green */
-.status-badge.refund { background-color: #fd7e14; }        /* Orange */
-.status-badge.confirmed { background-color: #007bff; }     /* Blue */
-
+.status-badge.pending { background-color: #3498db; }       /* Blue */
+.status-badge.contacted { background-color: #f1c40f; }     /* Yellow */
+.status-badge.not-interested { background-color: #e74c3c; }/* Red */
+.status-badge.qoutation { background-color: #6f42c1; }     /* Purple */
+.status-badge.group-trip { background-color: #2ecc71; }    /* Green */
+.status-badge.refund { background-color: #95a5a6; }        /* Gray */
+.status-badge.confirmed { background-color: #27ae60; }     /* Dark Green */
 /* Responsive */
 @media (max-width: 768px) {
     form {
