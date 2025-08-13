@@ -3,88 +3,80 @@
 {% block content %}
 <h2>Leads</h2>
 
-<!-- 🔘 Create Button -->
-<div class="button-group">
-    <a href="{{ url_for('add_lead') }}" class="btn">➕ Add Lead</a>
-</div>
+<form method="get" action="{{ url_for('leads') }}">
+    {% if session.role == 'admin' %}
+    <div>
+        <label for="employeeId">Employee:</label>
+        <select name="employeeId">
+            <option value="">All</option>
+            {% for emp in filter_options.employees %}
+            <option value="{{ emp.empId }}" {% if filters.employeeId == emp.empId %}selected{% endif %}>{{ emp.empName }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
 
-<div class="filter-card">
-    <form method="GET" action="{{ url_for('leads') }}" class="filter-form">
+    <div>
+        <label for="customerId">Customer:</label>
+        <select name="customerId">
+            <option value="">All</option>
+            {% for cust in filter_options.customers %}
+            <option value="{{ cust.customerId }}" {% if filters.customerId == cust.customerId %}selected{% endif %}>{{ cust.customerName }}</option>
+            {% endfor %}
+        </select>
+    </div>
 
+    <div>
+        <label for="status">Status:</label>
+        <select name="status">
+            <option value="">All</option>
+            {% for s in ['Pending', 'Contacted', 'Lost', 'Willing', 'Paid', 'Refund', 'Confirmed'] %}
+            <option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+    </div>
 
-        <label>Employee:
-            <select name="employeeId">
-                <option value="">All</option>
-                {% for emp in filter_options.employees %}
-                <option value="{{ emp.empId }}" {% if filters.employeeId==emp.empId %}selected{% endif %}>
-                    {{ emp.empName }}
-                </option>
-                {% endfor %}
-            </select>
-        </label>
+    <div>
+        <label for="source">Source:</label>
+        <select name="source">
+            <option value="">All</option>
+            {% for s in ['Facebook', 'WhatsApp', 'Reference', 'TikTok', 'Other'] %}
+            <option value="{{ s }}" {% if filters.source == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+    </div>
 
-        <label>Customer:
-            <select name="customerId">
-                <option value="">All</option>
-                {% for cust in filter_options.customers %}
-                <option value="{{ cust.customerId }}" {% if filters.customerId==cust.customerId %}selected{% endif %}>
-                    {{ cust.customerName }}
-                </option>
-                {% endfor %}
-            </select>
-        </label>
+    <div>
+        <label for="start_date">Start Date:</label>
+        <input type="date" name="start_date" value="{{ filters.start_date }}">
+    </div>
 
-        <label>Status:
-            <select name="status">
-                <option value="">All</option>
-                {% for val in leads | map(attribute='status') | unique %}
-                <option value="{{ val }}" {% if filters.status==val %}selected{% endif %}>{{ val }}</option>
-                {% endfor %}
-            </select>
-        </label>
+    <div>
+        <label for="end_date">End Date:</label>
+        <input type="date" name="end_date" value="{{ filters.end_date }}">
+    </div>
 
-        <label>Created From:
-            <input type="date" name="start_date" value="{{ filters.start_date }}">
-        </label>
+    <div class="form-buttons">
+        <button type="submit" class="btn">Filter</button>
+        <a href="{{ url_for('add_customer') }}" class="btn">+ Add New Lead</a>
+    </div>
+</form>
 
-        <label>Created To:
-            <input type="date" name="end_date" value="{{ filters.end_date }}">
-        </label>
-
-        <label>Sort By:
-            <select name="sort_by">
-                {% for col in ['employeeLeadId', 'employeeId', 'empName', 'customerId', 'customerName', 'status',
-                'currentAddress', 'desiredDestination', 'source', 'createdAt', 'updatedAt'] %}
-                <option value="{{ col }}" {% if sort_by==col %}selected{% endif %}>{{ col }}</option>
-                {% endfor %}
-            </select>
-        </label>
-
-        <label>Order:
-            <select name="sort_order">
-                <option value="asc" {% if sort_order=='asc' %}selected{% endif %}>Ascending</option>
-                <option value="desc" {% if sort_order=='desc' %}selected{% endif %}>Descending</option>
-            </select>
-        </label>
-
-        <button type="submit" class="btn">Apply Filters</button>
-        <a href="{{ url_for('leads') }}" class="btn danger">Reset</a>
-    </form>
-</div>
-
-<!-- 📋 Leads Table -->
 <table>
     <thead>
         <tr>
-            <th>Lead ID</th>
-            <th>Employee</th>
-            <th>Customer</th>
-            <th>Status</th>
-            <th>Current Address</th>
-            <th>Destination</th>
-            <th>Source</th>
-            <th>Created</th>
-            <th>Updated</th>
+            <th><a href="{{ url_for('leads', sort_by='employeeLeadId', sort_order='desc' if sort_by == 'employeeLeadId' and sort_order == 'asc' else 'asc', **filters) }}">Lead ID</a></th>
+            {% if session.role == 'admin' %}
+            <th><a href="{{ url_for('leads', sort_by='emp_name', sort_order='desc' if sort_by == 'emp_name' and sort_order == 'asc' else 'asc', **filters) }}">Employee</a></th>
+            {% endif %}
+            <th><a href="{{ url_for('leads', sort_by='cust_name', sort_order='desc' if sort_by == 'cust_name' and sort_order == 'asc' else 'asc', **filters) }}">Customer</a></th>
+            <th><a href="{{ url_for('leads', sort_by='status', sort_order='desc' if sort_by == 'status' and sort_order == 'asc' else 'asc', **filters) }}">Status</a></th>
+            <th><a href="{{ url_for('leads', sort_by='source', sort_order='desc' if sort_by == 'source' and sort_order == 'asc' else 'asc', **filters) }}">Source</a></th>
+            <th><a href="{{ url_for('leads', sort_by='currentAddress', sort_order='desc' if sort_by == 'currentAddress' and sort_order == 'asc' else 'asc', **filters) }}">Current Address</a></th>
+            <th><a href="{{ url_for('leads', sort_by='desiredDestination', sort_order='desc' if sort_by == 'desiredDestination' and sort_order == 'asc' else 'asc', **filters) }}">Desired Destination</a></th>
+            <th><a href="{{ url_for('leads', sort_by='amountClosed', sort_order='desc' if sort_by == 'amountClosed' and sort_order == 'asc' else 'asc', **filters) }}">Amount Closed</a></th>
+            <th><a href="{{ url_for('leads', sort_by='createdAt', sort_order='desc' if sort_by == 'createdAt' and sort_order == 'asc' else 'asc', **filters) }}">Created At</a></th>
+            <th><a href="{{ url_for('leads', sort_by='updatedAt', sort_order='desc' if sort_by == 'updatedAt' and sort_order == 'asc' else 'asc', **filters) }}">Updated At</a></th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -92,18 +84,20 @@
         {% for lead in leads %}
         <tr>
             <td>{{ lead.employeeLeadId }}</td>
-            <td>{{ lead.empName }}</td>
-            <td>{{ lead.customerName }}</td>
+            {% if session.role == 'admin' %}
+            <td>{{ lead.emp_name }}</td>
+            {% endif %}
+            <td>{{ lead.cust_name }}</td>
             <td>{{ lead.status }}</td>
+            <td>{{ lead.source }}</td>
             <td>{{ lead.currentAddress }}</td>
             <td>{{ lead.desiredDestination }}</td>
-            <td>{{ lead.source }}</td>
+            <td>{{ lead.amountClosed }}</td>
             <td>{{ lead.createdAt }}</td>
             <td>{{ lead.updatedAt }}</td>
             <td>
-                <a href="{{ url_for('edit_lead', lead_id=lead.employeeLeadId) }}" class="btn small">✏️</a>
-                <a href="{{ url_for('delete_lead', lead_id=lead.employeeLeadId) }}" class="btn-delete"
-                    onclick="return confirm('Are you sure you want to delete this lead?');">Delete</a>
+                <a href="{{ url_for('edit_lead', lead_id=lead.employeeLeadId) }}">Edit</a>
+                <a href="{{ url_for('delete_lead', lead_id=lead.employeeLeadId) }}" onclick="return confirm('Are you sure?')">Delete</a>
             </td>
         </tr>
         {% endfor %}
@@ -111,546 +105,169 @@
 </table>
 
 <style>
-    /* 🌐 Global Reset & Base Styles */
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
+/* Form Container */
+form {
+    max-width: 1200px;
+    margin: 2rem auto;
+    background-color: #ffffff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
 
-    body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background-color: #f4f7fa;
-        color: #333;
-        line-height: 1.6;
-        min-height: 100vh;
-        display: flex;
+/* Form Heading */
+h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    width: 100%;
+}
+
+/* Form Group Styling */
+form div {
+    flex: 1 1 200px;
+    margin-bottom: 1.25rem;
+}
+
+/* Label Styling */
+label {
+    display: block;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #34495e;
+    margin-bottom: 0.5rem;
+}
+
+/* Input and Select Styling */
+input[type="date"],
+select {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input[type="date"]:focus,
+select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    outline: none;
+}
+
+/* Form Buttons Container */
+.form-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    width: 100%;
+}
+
+/* Button Styling */
+.btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn[type="submit"] {
+    background-color: #007bff;
+    color: #ffffff;
+    border: 1px solid #007bff;
+}
+
+.btn[type="submit"]:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.btn[href] {
+    background-color: #28a745;
+    color: #ffffff;
+    border: 1px solid #28a745;
+}
+
+.btn[href]:hover {
+    background-color: #218838;
+    border-color: #218838;
+}
+
+/* Table Styling */
+table {
+    width: 100%;
+    max-width: 1200px;
+    margin: 2rem auto;
+    border-collapse: collapse;
+    background-color: #ffffff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+th, td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+}
+
+th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+th a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+th a:hover {
+    text-decoration: underline;
+}
+
+tr:hover {
+    background-color: #f8f9fa;
+}
+
+td a {
+    margin-right: 1rem;
+    color: #007bff;
+    text-decoration: none;
+}
+
+td a:hover {
+    text-decoration: underline;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    form {
         flex-direction: column;
     }
 
-    body.sidebar-open {
-        overflow-x: hidden;
+    form div {
+        flex: 1 1 100%;
     }
 
-    /* 🔗 Link Styling */
-    a {
-        text-decoration: none;
-        transition: color 0.3s ease, background-color 0.3s ease;
-    }
-
-    /* 🔝 Header */
-    .header {
-        background-color: #004e7c;
-        color: white;
-        padding: 0.75rem 1rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 1000;
-    }
-
-    /* Header Left (Toggle + Brand) */
-    .header-left {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .navbar-brand {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: white;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .navbar-brand img.logo {
-        height: 36px;
-        width: auto;
-        object-fit: contain;
-    }
-
-    .navbar-brand:hover {
-        color: #80bdff;
-    }
-
-    /* Header Right (Welcome + Buttons) */
-    .header-right {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .filter-card {
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-        margin-bottom: 20px;
-        width: 100%;
-    }
-
-    .navbar-text {
-        color: white;
-        font-size: 0.95rem;
-        font-weight: 500;
-    }
-
-    /* Buttons (Login/Logout/Register) */
-    .btn-outline-primary {
-        border-color: #007bff;
-        color: #eff1f3;
-        font-weight: 500;
-        padding: 0.4rem 1rem;
-        border-radius: 4px;
-        transition: all 0.3s ease;
-        font-size: 0.9rem;
-    }
-
-    .btn-outline-primary:hover {
-        background-color: #007bff;
-        color: white;
-        border-color: #007bff;
-    }
-
-    /* 🍔 Menu Toggle Button */
-    .menu-toggle {
-        background: none;
-        border: none;
-        color: white;
-        font-size: 1.25rem;
-        cursor: pointer;
-        padding: 0.5rem;
-        line-height: 1;
-    }
-
-    .menu-toggle .navbar-toggler-icon {
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(255, 255, 255, 0.9)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
-        width: 24px;
-        height: 24px;
-        display: inline-block;
-    }
-
-    .menu-toggle:focus {
-        outline: none;
-        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
-    }
-
-    /* 📐 Layout */
-    .layout {
-        display: flex;
-        margin-top: 56px;
-        min-height: calc(100vh - 56px - 48px);
-    }
-
-    /* 📚 Sidebar */
-    .sidebar {
-        width: 220px;
-        background-color: #003354;
-        color: white;
-        padding: 1.5rem 1rem;
-        display: flex;
-        flex-direction: column;
-        position: fixed;
-        top: 56px;
-        bottom: 0;
-        z-index: 999;
-        transition: transform 0.3s ease-in-out;
-    }
-
-    .sidebar .nav {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-
-    .sidebar .nav-link {
-        color: white;
-        font-size: 0.95rem;
-        font-weight: 500;
-        padding: 0.5rem 1rem;
-        border-radius: 4px;
-        transition: background-color 0.2s ease, color 0.2s ease;
-        display: flex;
-        align-items: center;
-    }
-
-    .sidebar .nav-link:hover,
-    .sidebar .nav-link.active {
-        background-color: #0069aa;
-        color: white;
-    }
-
-    /* Sidebar Closed */
-    .sidebar-closed {
-        transform: translateX(-100%);
-    }
-
-    /* 📱 Overlay for Sidebar */
-    .overlay {
-        display: none;
-        position: fixed;
-        top: 56px;
-        left: 0;
-        width: 100%;
-        height: calc(100% - 56px);
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 998;
-        transition: opacity 0.3s ease;
-    }
-
-    .overlay.active {
-        display: block;
-        opacity: 1;
-    }
-
-    /* 📄 Main Content */
-    .main-content {
-        flex-grow: 1;
-        padding: 1.5rem;
-        transition: margin-left 0.3s ease-in-out;
-        margin-left: 220px;
-    }
-
-    .sidebar-closed~.main-content {
-        margin-left: 0;
-    }
-
-    /* Container */
-    .container {
-        margin: 0 auto;
-        padding: 1rem;
-        background-color: white;
-        border-radius: 6px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-
-    /* ✅ Flash Messages (Bootstrap Alerts) */
-    .alert {
-        padding: 0.75rem 1.25rem;
-        border-radius: 4px;
-        margin-bottom: 0.75rem;
-        font-weight: 500;
-        position: relative;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    }
-
-    .alert-success {
-        background-color: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-    }
-
-    .alert-danger {
-        background-color: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-    }
-
-    .alert-info {
-        background-color: #d1ecf1;
-        color: #0c5460;
-        border: 1px solid #bee5eb;
-    }
-
-    .alert .btn-close {
-        position: absolute;
-        top: 0.5rem;
-        right: 0.75rem;
-        padding: 0.5rem;
-        opacity: 0.7;
-        transition: opacity 0.3s ease;
-    }
-
-    .alert .btn-close:hover {
-        opacity: 1;
-    }
-
-    /* 📊 Chart.js Canvas */
-    canvas {
-        max-width: 100%;
-        height: auto;
-        margin: 0.75rem 0;
-        border-radius: 4px;
-        background-color: #fff;
-        padding: 0.75rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    }
-
-    /* 📆 Filter Form (Base Styles for Consistency) */
-    .filter-form {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-        width: 100%;
-    }
-
-    .filter-form label {
-        display: flex;
-        flex-direction: column;
-        font-size: 0.85rem;
-        color: #333;
-        margin-bottom: 0.5rem;
-    }
-
-    form .filter-form {
-        width: 100px;
-    }
-
-    .filter-form select,
-    .filter-form input[type="date"] {
-        padding: 0.4rem;
-        border: 1px solid #ced4da;
-        border-radius: 4px;
-        font-size: 0.85rem;
-        background-color: #f8f9fa;
-        transition: border-color 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .filter-form select:focus,
-    .filter-form input[type="date"]:focus {
-        outline: none;
-        border-color: #007bff;
-        box-shadow: 0 0 4px rgba(0, 123, 255, 0.3);
-    }
-
-    /* 🔚 Footer */
-    .footer {
-        background-color: #004e7c;
-        color: white;
-        text-align: center;
-        padding: 0.75rem;
-        font-size: 0.85rem;
-        border-top: 1px solid #003354;
-        margin-top: auto;
-    }
-
-    /* 📱 Responsive Styles */
-    @media (max-width: 991.98px) {
-        .sidebar {
-            width: 200px;
-            transform: translateX(-100%);
-        }
-
-        .sidebar:not(.sidebar-closed) {
-            transform: translateX(0);
-        }
-
-        .main-content {
-            margin-left: 0;
-        }
-
-        .navbar-brand {
-            font-size: 1.1rem;
-        }
-
-        .navbar-brand img.logo {
-            height: 28px;
-        }
-
-        .header-right {
-            gap: 0.5rem;
-        }
-
-        .btn-outline-primary {
-            padding: 0.3rem 0.75rem;
-            font-size: 0.85rem;
-        }
-
-        .navbar-text {
-            font-size: 0.85rem;
-        }
-
-        .menu-toggle .navbar-toggler-icon {
-            width: 20px;
-            height: 20px;
-        }
-    }
-
-    @media (max-width: 767.98px) {
-        .header {
-            padding: 0.5rem 0.75rem;
-        }
-
-        .container {
-            padding: 0.75rem;
-        }
-
-        .main-content {
-            padding: 1rem;
-        }
-
-        .alert {
-            padding: 0.5rem 1rem;
-            font-size: 0.8rem;
-        }
-
-        .sidebar {
-            padding: 1rem 0.75rem;
-            width: 180px;
-        }
-
-        .sidebar .nav-link {
-            font-size: 0.9rem;
-            padding: 0.4rem 0.75rem;
-        }
-
-        .filter-form {
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-    }
-
-    @media (max-width: 575.98px) {
-        .navbar-brand {
-            font-size: 1rem;
-        }
-
-        .navbar-brand img.logo {
-            height: 24px;
-        }
-
-        .header-right {
-            flex-wrap: wrap;
-            gap: 0.25rem;
-        }
-
-        .btn-outline-primary {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.8rem;
-        }
-
-        .navbar-text {
-            font-size: 0.8rem;
-        }
-
-        .filter-form select,
-        .filter-form input[type="date"] {
-            font-size: 0.8rem;
-        }
-
-        canvas {
-            padding: 0.5rem;
-        }
-
-        .footer {
-            font-size: 0.75rem;
-            padding: 0.5rem;
-        }
-    }
-
-    /* Accessibility Improvements */
-    :focus {
-        outline: 2px solid #007bff;
-        outline-offset: 2px;
-    }
-
-    .sr-only {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        border: 0;
-    }
-
-    /* Smooth Scroll Behavior */
-    html {
-        scroll-behavior: smooth;
-    }
-
-    /* Touch-Friendly Interactions */
-    button,
-    a,
-    .menu-toggle {
-        touch-action: manipulation;
-    }
-
-    /* Table Styling */
     table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 1rem;
-        background-color: white;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        font-size: 0.9rem;
     }
 
-    th,
-    td {
+    th, td {
         padding: 0.75rem;
-        text-align: left;
-        border-bottom: 1px solid #dee2e6;
     }
-
-    th {
-        background-color: #1477db;
-        font-weight: 600;
-        font-size: 0.9rem;
-        color: #ffffff;
-    }
-
-    td {
-        font-size: 0.85rem;
-    }
-
-    tr:hover {
-        background-color: #f8f9fa;
-    }
-
-    /* Button Group */
-    .button-group {
-        margin-bottom: 1rem;
-    }
-
-    .btn {
-        display: inline-block;
-        padding: 0.5rem 1rem;
-        background-color: #007bff;
-        color: white;
-        border-radius: 4px;
-        font-size: 0.9rem;
-        font-weight: 500;
-        transition: background-color 0.3s ease;
-    }
-
-    .btn:hover {
-        background-color: #0056b3;
-    }
-
-    .btn.small {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.8rem;
-    }
-
-    .btn-delete {
-        color: #dc3545;
-        font-size: 0.85rem;
-        padding: 0.25rem 0.5rem;
-    }
-
-    .btn-delete:hover {
-        color: #a71d2a;
-    }
-
-    /* Danger Button */
-    .btn.danger {
-        background-color: #dc3545;
-    }
-
-    .btn.danger:hover {
-        background-color: #a71d2a;
-    }
+}
 </style>
 {% endblock %}

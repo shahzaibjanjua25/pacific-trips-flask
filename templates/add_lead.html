@@ -4,22 +4,27 @@
 <h2>Add New Lead</h2>
 
 <form method="POST" id="leadForm">
+    {% if session.role == 'employee' %}
+    <input type="hidden" name="employeeId" value="{{ session.user_id }}">
+    {% else %}
     <div>
         <label for="employeeId">Employee:</label>
         <select name="employeeId" id="employeeId" required>
+            <option value="">Select an employee</option>
             {% for emp in employees %}
             <option value="{{ emp.empId }}">{{ emp.empName }}</option>
             {% endfor %}
         </select>
     </div>
+    {% endif %}
 
     <div>
         <label for="customerId">Customer:</label>
         <select name="customerId" id="customerId" required onchange="updateCustomerDetails()">
             <option value="">Select a customer</option>
             {% for cust in customers %}
-            <option value="{{ cust.customerId }}" 
-                    data-current="{{ cust.currentLocation }}" 
+            <option value="{{ cust.customerId }}"
+                    data-current="{{ cust.currentLocation }}"
                     data-destination="{{ cust.desiredDestination }}"
                     data-phone="{{ cust.phone }}"
                     data-source="{{ cust.source }}">
@@ -38,17 +43,16 @@
         </select>
     </div>
 
-    <!-- Add an empty div to keep layout alignment -->
-    <div></div>
-
     <!-- Hidden fields auto-filled from customer -->
     <input type="hidden" name="source" id="source">
     <input type="hidden" name="currentAddress" id="currentAddress">
     <input type="hidden" name="desiredDestination" id="desiredDestination">
     <input type="hidden" id="amountClosed" name="amountClosed" value="0">
 
-    <!-- Button row -->
+    <!-- Empty div to maintain layout -->
     <div></div>
+
+    <!-- Button row -->
     <div class="form-buttons">
         <button type="submit" class="btn">Create Lead</button>
         <a href="{{ url_for('leads') }}" class="btn">Cancel</a>
@@ -71,9 +75,9 @@ function updateCustomerDetails() {
     const selectedOption = customerSelect.options[customerSelect.selectedIndex];
 
     if (selectedOption.value) {
-        document.getElementById('currentAddress').value = selectedOption.dataset.current;
-        document.getElementById('desiredDestination').value = selectedOption.dataset.destination;
-        document.getElementById('source').value = selectedOption.dataset.source;
+        document.getElementById('currentAddress').value = selectedOption.dataset.current || '';
+        document.getElementById('desiredDestination').value = selectedOption.dataset.destination || '';
+        document.getElementById('source').value = selectedOption.dataset.source || '';
     } else {
         document.getElementById('currentAddress').value = '';
         document.getElementById('desiredDestination').value = '';
@@ -88,6 +92,8 @@ function checkStatusChange() {
 
     if (newStatus === 'Confirmed') {
         showAmountModal('Enter the closed amount for this lead:');
+    } else {
+        document.getElementById('amountClosed').value = 0;
     }
 
     previousStatus = newStatus;
@@ -105,11 +111,11 @@ function closeModal() {
 
 function confirmAmount() {
     const amount = document.getElementById('amountInput').value;
-    if (amount && !isNaN(amount)) {
+    if (amount && !isNaN(amount) && amount > 0) {
         document.getElementById('amountClosed').value = amount;
         closeModal();
     } else {
-        alert('Please enter a valid amount');
+        alert('Please enter a valid positive amount');
     }
 }
 
@@ -126,6 +132,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <style>
+/* Modal Styles */
 .modal {
     display: none;
     position: fixed;
@@ -180,6 +187,167 @@ document.addEventListener('DOMContentLoaded', function () {
 
 .close:hover {
     color: black;
+}
+
+/* Form Container */
+form {
+    max-width: 600px;
+    margin: 2rem auto;
+    background-color: #ffffff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Form Heading */
+h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+/* Form Group Styling */
+form div {
+    margin-bottom: 1.25rem;
+}
+
+/* Label Styling */
+label {
+    display: block;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #34495e;
+    margin-bottom: 0.5rem;
+}
+
+/* Input and Select Styling */
+input[type="text"],
+input[type="date"],
+select {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input[type="text"]:focus,
+input[type="date"]:focus,
+select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    outline: none;
+}
+
+/* Required Field Indicator */
+input:required,
+select:required {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='%23dc3545' d='M4 0L0 4l4 4 4-4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 8px;
+}
+
+/* Form Buttons Container */
+.form-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+/* Button Styling */
+.btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn[type="submit"] {
+    background-color: #007bff;
+    color: #ffffff;
+    border: 1px solid #007bff;
+}
+
+.btn[type="submit"]:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.btn[href] {
+    background-color: #6c757d;
+    color: #ffffff;
+    border: 1px solid #6c757d;
+}
+
+.btn[href]:hover {
+    background-color: #5a6268;
+    border-color: #5a6268;
+}
+
+/* Responsive Design */
+@media (max-width: 576px) {
+    form {
+        padding: 1.5rem;
+        margin: 1rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    label {
+        font-size: 0.95rem;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    select {
+        font-size: 0.9rem;
+        padding: 0.65rem;
+    }
+
+    .form-buttons {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 0.65rem;
+        font-size: 0.95rem;
+    }
+}
+
+/* Accessibility Improvements */
+:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+label:focus-within {
+    color: #007bff;
+}
+
+/* Error State for Invalid Inputs */
+input:invalid,
+select:invalid {
+    border-color: #dc3545;
+}
+
+input:invalid:focus,
+select:invalid:focus {
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
 }
 </style>
 {% endblock %}

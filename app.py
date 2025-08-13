@@ -433,11 +433,12 @@ def customers():
 
 
 @app.route('/add_customer', methods=['GET', 'POST'])
-# @admin_required
+@login_required
 def add_customer():
     if request.method == 'POST':
         new_id = str(uuid.uuid4())[:8]
         form = request.form
+        amount_closed = float(form.get('amountClosed', 0))
         new_values = {
             'customerId': new_id,
             'customerName': form['customerName'],
@@ -448,6 +449,10 @@ def add_customer():
             'desiredDestination': form['desiredDestination'],
             'dateOfArrival': form['dateOfArrival']
         }
+        employee = get_employee_details(session['user_id'])
+        if not employee:
+            flash("Employee details not found.", "danger")
+            return redirect(url_for('add_customer'))
         with closing(get_db_connection()) as conn:
             with closing(conn.cursor()) as cursor:
                 cursor.execute('''
@@ -464,14 +469,61 @@ def add_customer():
                     form['desiredDestination'],
                     form['dateOfArrival']
                 ))
+
+                # Insert into leads
+                lead_id = str(uuid.uuid4())[:8]
+                lead_amount_closed = amount_closed if form['status'] == 'Confirmed' else 0
+                cursor.execute('''
+                    INSERT INTO leads 
+                    (employeeLeadId, employeeId, employeeName, employeeContactNo, 
+                     customerId, customerName, customerContactNo, 
+                     currentAddress, desiredDestination, status, source, amountClosed)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    lead_id,
+                    employee['empId'],
+                    employee['empName'],
+                    employee['phoneNo'],
+                    new_id,
+                    form['customerName'],
+                    form['phone'],
+                    form['currentLocation'],
+                    form['desiredDestination'],
+                    form['status'],
+                    form['source'],
+                    lead_amount_closed
+                ))
+
+                if form['status'] == 'Confirmed' and amount_closed > 0:
+                    new_achieved = employee['achievedAmount'] + amount_closed
+                    cursor.execute('''
+                        UPDATE employees 
+                        SET achievedAmount = ?
+                        WHERE empId = ?
+                    ''', (new_achieved, employee['empId']))
+
                 conn.commit()
         
-        # Log the insertion
+        # Log the customer insertion
         description = f"Added customer {form['customerName']} with ID {new_id}"
-        log_change('customers', 'INSERT', new_id, description, new_values=new_values)
+        log_change('customers', 'INSERT', new_id, description, new_values=new_values, changed_by=session['user_id'])
         
-        flash("Customer added!", "success")
-        return redirect(url_for('customers'))
+        # Log the lead insertion
+        lead_new_values = {
+            'employeeLeadId': lead_id,
+            'employeeId': employee['empId'],
+            'customerId': new_id,
+            'status': form['status'],
+            'source': form['source'],
+            'currentAddress': form['currentLocation'],
+            'desiredDestination': form['desiredDestination'],
+            'amountClosed': lead_amount_closed
+        }
+        lead_description = f"Added lead {lead_id} for employee {employee['empName']} and customer {form['customerName']}"
+        log_change('leads', 'INSERT', lead_id, lead_description, new_values=lead_new_values, changed_by=session['user_id'], lead_employee=employee['empId'])
+        
+        flash("Customer and Lead added!", "success")
+        return redirect(url_for('leads'))
 
     return render_template('add_customer.html')
 
@@ -594,7 +646,7 @@ def employees():
         params.append(filters['start_date'])
 
     if filters['end_date']:
-        query += " AND DATE(createdAt) <= ?"
+        query += " AND DATE(created_at) <= ?"
         params.append(filters['end_date'])
 
     query += f" ORDER BY {sort_by} {sort_order.upper()}"
@@ -720,7 +772,6 @@ def delete_employee(emp_id):
             else:
                 flash("Employee not found!", "danger")
     return redirect(url_for('employees'))
-
 @app.route('/leads', methods=['GET'])
 @login_required
 def leads():
@@ -735,6 +786,9 @@ def leads():
     
     sort_by = request.args.get('sort_by', 'employeeLeadId')
     sort_order = request.args.get('sort_order', 'asc')
+
+    if session['role'] == 'employee':
+        filters["employeeId"] = session['user_id']
 
     leads = get_filtered_sorted_leads(
         filters["employeeId"],
@@ -759,96 +813,6 @@ def leads():
                              "employees": employees, 
                              "customers": customers
                          })
-
-@app.route('/leads/add', methods=['GET', 'POST'])
-# @admin_required
-def add_lead():
-    if request.method == 'POST':
-        form = request.form
-        lead_id = str(uuid.uuid4())[:8]
-        amount_closed = float(form.get('amountClosed', 0))
-        customer_id = form['customerId']
-
-        with closing(get_db_connection()) as conn:
-            with closing(conn.cursor()) as cursor:
-                cursor.execute("SELECT COUNT(*) FROM leads WHERE customerId = ?", (customer_id,))
-                count = cursor.fetchone()[0]
-
-                if count > 0:
-                    flash("This customer is already assigned to another lead!", "danger")
-                    return redirect(url_for('add_lead'))
-
-                cursor.execute("""
-                    SELECT empId, empName, phoneNo, achievedAmount 
-                    FROM employees 
-                    WHERE empId = ?
-                """, (form['employeeId'],))
-                employee = cursor.fetchone()
-                if not employee:
-                    flash("Employee not found!", "danger")
-                    return redirect(url_for('add_lead'))
-
-                cursor.execute("""
-                    SELECT customerId, customerName, phone, currentLocation, desiredDestination, source
-                    FROM customers
-                    WHERE customerId = ?
-                """, (customer_id,))
-                customer = cursor.fetchone()
-                if not customer:
-                    flash("Customer not found!", "danger")
-                    return redirect(url_for('add_lead'))
-
-                if form['status'] == 'Confirmed' and amount_closed > 0:
-                    new_achieved = employee['achievedAmount'] + amount_closed
-                    cursor.execute("""
-                        UPDATE employees 
-                        SET achievedAmount = ?
-                        WHERE empId = ?
-                    """, (new_achieved, employee['empId']))
-
-                cursor.execute("""
-                    INSERT INTO leads (
-                        employeeLeadId, employeeId, employeeName, employeeContactNo,
-                        customerId, customerName, customerContactNo,
-                        currentAddress, desiredDestination, status, source, amountClosed
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    lead_id,
-                    employee['empId'],
-                    employee['empName'],
-                    employee['phoneNo'],
-                    customer['customerId'],
-                    customer['customerName'],
-                    customer['phone'],
-                    customer['currentLocation'],
-                    customer['desiredDestination'],
-                    form['status'],
-                    customer['source'],
-                    amount_closed if form['status'] == 'Confirmed' else 0
-                ))
-
-                conn.commit()
-
-        # Log the insertion
-        new_values = {
-            'employeeLeadId': lead_id,
-            'employeeId': form['employeeId'],
-            'customerId': form['customerId'],
-            'status': form['status'],
-            'source': customer['source'],
-            'currentAddress': customer['currentLocation'],
-            'desiredDestination': customer['desiredDestination'],
-            'amountClosed': amount_closed if form['status'] == 'Confirmed' else 0
-        }
-        description = f"Added lead {lead_id} for employee {employee['empName']} and customer {customer['customerName']}"
-        log_change('leads', 'INSERT', lead_id, description, new_values=new_values, changed_by=session['user_id'], lead_employee=form['employeeId'])
-
-        flash("Lead added successfully!", "success")
-        return redirect(url_for('leads'))
-
-    return render_template('add_lead.html',
-                           employees=get_all_employees(),
-                           customers=get_all_customers())
 
 @app.route('/leads/edit/<string:lead_id>', methods=['GET', 'POST'])
 # @admin_required
@@ -1010,7 +974,7 @@ def delete_lead(lead_id):
 
 @app.route("/leads/create", methods=["GET", "POST"])
 # @admin_required
-def create_lead():
+def add_lead():
     employees = get_all_employees()
     customers = get_all_customers()
 
@@ -1049,7 +1013,7 @@ def create_lead():
         flash("Lead created successfully!")
         return redirect(url_for('leads'))
 
-    return render_template("create_lead.html", employees=employees, customers=customers)
+    return render_template("add_lead.html", employees=employees, customers=customers)
 
 @app.route('/status_tracking', methods=['GET'])
 @admin_required
