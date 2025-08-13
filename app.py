@@ -379,6 +379,7 @@ def profile():
 
 
 @app.route('/customers')
+@admin_required
 @login_required
 def customers():    
     filters = {
@@ -528,7 +529,7 @@ def add_customer():
     return render_template('add_customer.html')
 
 @app.route('/customers/edit/<string:customer_id>', methods=['GET', 'POST'])
-# @admin_required
+@admin_required
 def edit_customer(customer_id):
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:
@@ -599,7 +600,7 @@ def edit_customer(customer_id):
     return render_template('edit_customer.html', customer=customer)
 
 @app.route('/customers/delete/<string:customer_id>')
-# @admin_required
+@admin_required
 def delete_customer(customer_id):
     with closing(get_db_connection()) as conn:
         with closing(conn.cursor()) as cursor:

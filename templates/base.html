@@ -586,12 +586,13 @@
                     <a class="nav-link {% if request.endpoint == 'logs' %}active{% endif %}"
                         href="{{ url_for('logs') }}">Logs</a>
                 </li>
-                <!-- Admin should NOT see profile -->
-                {% elif session.role == 'employee' %}
-                <li class="nav-item">
+                  <li class="nav-item">
                     <a class="nav-link {% if request.endpoint == 'customers' %}active{% endif %}"
                         href="{{ url_for('customers') }}">Customers</a>
                 </li>
+                <!-- Admin should NOT see profile -->
+                {% elif session.role == 'employee' %}
+              
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint == 'leads' %}active{% endif %}"
                         href="{{ url_for('leads') }}">Leads</a>
