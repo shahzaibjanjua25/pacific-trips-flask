@@ -118,12 +118,21 @@
         // Close Sidebar when a link is clicked on mobile
         document.querySelectorAll('.sidebar .nav-link').forEach(link => {
             link.addEventListener('click', () => {
-                if (window.innerWidth <= 991.98) {
+                if (window.innerWidth < 992) {
                     document.querySelector('.sidebar').classList.add('sidebar-closed');
                     document.querySelector('.overlay').classList.remove('active');
                     document.body.classList.remove('sidebar-open');
                 }
             });
+        });
+
+        // Adjust layout on window resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 992 && document.querySelector('.sidebar').classList.contains('sidebar-closed')) {
+                document.querySelector('.sidebar').classList.remove('sidebar-closed');
+                document.querySelector('.overlay').classList.remove('active');
+                document.body.classList.remove('sidebar-open');
+            }
         });
     </script>
 </body>
