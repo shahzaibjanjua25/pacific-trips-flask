@@ -83,7 +83,7 @@ a {
 /* Buttons (Login/Logout/Register) */
 .btn-outline-primary {
     border-color: #007bff;
-    color: #007bff;
+    color: #f5f7fa;
     font-weight: 500;
     padding: 0.4rem 1rem;
     border-radius: 4px;
@@ -122,8 +122,10 @@ a {
 /* 📐 Layout */
 .layout {
     display: flex;
-    margin-top: 56px; /* Adjusted for header height */
-    min-height: calc(100vh - 56px - 48px); /* Subtract header and footer */
+    margin-top: 56px;
+    /* Adjusted for header height */
+    min-height: calc(100vh - 56px - 48px);
+    /* Subtract header and footer */
 }
 
 /* 📚 Sidebar */
@@ -196,12 +198,13 @@ a {
     transition: margin-left 0.3s ease;
 }
 
-.sidebar-closed ~ .main-content {
+.sidebar-closed~.main-content {
     margin-left: 0;
 }
 
 .main-content {
-    margin-left: 220px; /* Matches sidebar width */
+    margin-left: 220px;
+    /* Matches sidebar width */
 }
 
 /* Container */
@@ -307,7 +310,8 @@ canvas {
 @media (max-width: 991.98px) {
     .sidebar {
         width: 200px;
-        transform: translateX(-100%); /* Hidden by default on smaller screens */
+        transform: translateX(-100%);
+        /* Hidden by default on smaller screens */
     }
 
     .sidebar:not(.sidebar-closed) {
@@ -437,6 +441,8 @@ html {
 }
 
 /* Touch-Friendly Interactions */
-button, a, .menu-toggle {
+button,
+a,
+.menu-toggle {
     touch-action: manipulation;
 }

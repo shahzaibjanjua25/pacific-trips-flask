@@ -64,26 +64,27 @@ def login():
         return redirect(url_for('index'))
         
     if request.method == 'POST':
-        username = request.form['username']
+        employee_id = request.form['employeeId']  # note: you use employeeId in form, not username
         password = request.form['password']
         
         with closing(get_db_connection()) as conn:
             cursor = conn.cursor()
-            cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
+            cursor.execute('SELECT * FROM users WHERE employee_id = ?', (employee_id,))
             user_data = cursor.fetchone()
         
         if user_data and check_password_hash(user_data['password_hash'], password):
-            from app import User  # Import User class from app.py
+            from app import User
             user = User(user_data['user_id'], user_data['username'], 
                        user_data['role'], user_data['employee_id'])
             login_user(user)
-            
-            next_page = request.args.get('next')
-            return redirect(next_page or url_for('index'))
+
+            # Instead of redirect here, render template with success flag
+            return render_template('login.html', login_success=True)
         else:
-            flash('Invalid username or password', 'danger')
+            flash('Invalid employee ID or password', 'danger')
     
     return render_template('login.html')
+
 
 @auth_bp.route('/logout')
 @login_required

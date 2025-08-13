@@ -10,6 +10,7 @@
 
 <!-- 🔍 Filters + Sorting -->
 <form method="GET" action="{{ url_for('leads') }}" class="filter-form">
+    {% if session.role == 'admin' %}
     <label>Employee:
         <select name="employeeId">
             <option value="">All</option>
@@ -20,6 +21,7 @@
             {% endfor %}
         </select>
     </label>
+    {% endif %}
 
     <label>Customer:
         <select name="customerId">
@@ -51,7 +53,7 @@
 
     <label>Sort By:
         <select name="sort_by">
-            {% for col in ['employeeLeadId', 'employeeId', 'empName', 'customerId', 'customerName', 'status', 'currentAddress', 'desiredDestination', 'source','createdAt', 'updatedAt'] %}
+            {% for col in ['employeeLeadId', 'employeeId', 'empName', 'customerId', 'customerName', 'status', 'currentAddress', 'desiredDestination', 'source', 'createdAt', 'updatedAt'] %}
             <option value="{{ col }}" {% if sort_by == col %}selected{% endif %}>{{ col }}</option>
             {% endfor %}
         </select>
@@ -88,8 +90,8 @@
         {% for lead in leads %}
         <tr>
             <td>{{ lead.employeeLeadId }}</td>
-            <td>{{ lead.emp_name }}</td>
-            <td>{{ lead.cust_name }}</td>
+            <td>{{ lead.empName }}</td>
+            <td>{{ lead.customerName }}</td>
             <td>{{ lead.status }}</td>
             <td>{{ lead.currentAddress }}</td>
             <td>{{ lead.desiredDestination }}</td>
@@ -105,29 +107,465 @@
         {% endfor %}
     </tbody>
 </table>
-<style>/* Make the filter form and the table share the same max-width and alignment */
-.filter-form {
-  max-width: 1400px;   /* or whatever width your table container uses */
-  margin: 20px auto;   /* center horizontally and add vertical spacing */
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-  align-items: center;
+
+<style>
+/* 🌐 Global Reset & Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-/* Make the labels inside filter-form more compact */
-.filter-form label {
-  display: flex;
-  flex-direction: column;
-  font-weight: 600;
-  min-width: 150px; /* or adjust to fit your labels nicely */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f7fa;
+    color: #333;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
-/* Make the buttons in filter form consistent and spaced */
-.filter-form .btn,
-.filter-form .btn.danger {
-  min-width: 120px;
-  margin-top: 24px;
+body.sidebar-open {
+    overflow-x: hidden;
+}
+
+/* 🔗 Link Styling */
+a {
+    text-decoration: none;
+    transition: color 0.3s ease, background-color 0.3s ease;
+}
+
+/* 🔝 Header */
+.header {
+    background-color: #004e7c;
+    color: white;
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+}
+
+/* Header Left (Toggle + Brand) */
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.navbar-brand {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.navbar-brand img.logo {
+    height: 36px;
+    width: auto;
+    object-fit: contain;
+}
+
+.navbar-brand:hover {
+    color: #80bdff;
+}
+
+/* Header Right (Welcome + Buttons) */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.navbar-text {
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+/* Buttons (Login/Logout/Register) */
+.btn-outline-primary {
+    border-color: #007bff;
+    color: #eff1f3;
+    font-weight: 500;
+    padding: 0.4rem 1rem;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.btn-outline-primary:hover {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+/* 🍔 Menu Toggle Button */
+.menu-toggle {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    line-height: 1;
+}
+
+.menu-toggle .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(255, 255, 255, 0.9)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+    width: 24px;
+    height: 24px;
+}
+
+.menu-toggle:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
+}
+
+/* 📐 Layout */
+.layout {
+    display: flex;
+    margin-top: 56px;
+    min-height: calc(100vh - 56px - 48px);
+}
+
+/* 📚 Sidebar */
+.sidebar {
+    width: 220px;
+    background-color: #003354;
+    color: white;
+    padding: 1.5rem 1rem;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 56px;
+    bottom: 0;
+    z-index: 999;
+    transition: transform 0.3s ease-in-out;
+}
+
+.sidebar .nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.sidebar .nav-link {
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    background-color: #0069aa;
+    color: white;
+}
+
+/* Sidebar Closed */
+.sidebar-closed {
+    transform: translateX(-100%);
+}
+
+/* 📱 Overlay for Sidebar */
+.overlay {
+    display: none;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    width: 100%;
+    height: calc(100% - 56px);
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+    transition: opacity 0.3s ease;
+}
+
+.overlay.active {
+    display: block;
+    opacity: 1;
+}
+
+/* 📄 Main Content */
+.main-content {
+    flex-grow: 1;
+    padding: 1.5rem;
+    transition: margin-left 0.3s ease-in-out;
+}
+
+.sidebar-closed ~ .main-content {
+    margin-left: 0;
+}
+
+.main-content {
+    margin-left: 220px;
+}
+
+/* Container */
+.container {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 1rem;
+    background-color: white;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* ✅ Flash Messages (Bootstrap Alerts) */
+.alert {
+    padding: 0.75rem 1.25rem;
+    border-radius: 4px;
+    margin-bottom: 0.75rem;
+    font-weight: 500;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+.alert .btn-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    padding: 0.5rem;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.alert .btn-close:hover {
+    opacity: 1;
+}
+
+/* 📊 Chart.js Canvas */
+canvas {
+    max-width: 100%;
+    height: auto;
+    margin: 0.75rem 0;
+    border-radius: 4px;
+    background-color: #fff;
+    padding: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* 📆 Filter Form (Base Styles for Consistency) */
+.filter-form label[for="start_date"],
+.filter-form label[for="end_date"] {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.85rem;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.filter-form input[type="date"] {
+    padding: 0.4rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    width: 100%;
+    background-color: #f8f9fa;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.filter-form input[type="date"]:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 4px rgba(0, 123, 255, 0.3);
+}
+
+/* 🔚 Footer */
+.footer {
+    background-color: #004e7c;
+    color: white;
+    text-align: center;
+    padding: 0.75rem;
+    font-size: 0.85rem;
+    border-top: 1px solid #003354;
+    margin-top: auto;
+}
+
+/* 📱 Responsive Styles */
+@media (min-width: 992px) {
+    .sidebar {
+        transform: translateX(0);
+    }
+
+    .overlay {
+        display: none !important;
+    }
+
+    .main-content {
+        margin-left: 220px;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .sidebar {
+        width: 200px;
+        transform: translateX(-100%);
+    }
+
+    .sidebar:not(.sidebar-closed) {
+        transform: translateX(0);
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
+
+    .navbar-brand img.logo {
+        height: 28px;
+    }
+
+    .header-right {
+        gap: 0.5rem;
+    }
+
+    .btn-outline-primary {
+        padding: 0.3rem 0.75rem;
+        font-size: 0.85rem;
+    }
+
+    .navbar-text {
+        font-size: 0.85rem;
+    }
+
+    .menu-toggle {
+        font-size: 1.1rem;
+    }
+
+    .menu-toggle .navbar-toggler-icon {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .header {
+        padding: 0.5rem 0.75rem;
+    }
+
+    .container {
+        padding: 0.75rem;
+    }
+
+    .main-content {
+        padding: 1rem;
+    }
+
+    .alert {
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+    }
+
+    .sidebar {
+        padding: 1rem 0.75rem;
+        width: 180px;
+    }
+
+    .sidebar .nav-link {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.75rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .navbar-brand {
+        font-size: 1rem;
+    }
+
+    .navbar-brand img.logo {
+        height: 24px;
+    }
+
+    .header-right {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+
+    .btn-outline-primary {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .navbar-text {
+        font-size: 0.8rem;
+    }
+
+    .filter-form input[type="date"] {
+        font-size: 0.8rem;
+    }
+
+    canvas {
+        padding: 0.5rem;
+    }
+
+    .footer {
+        font-size: 0.75rem;
+        padding: 0.5rem;
+    }
+}
+
+/* Accessibility Improvements */
+:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+/* Smooth Scroll Behavior */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Touch-Friendly Interactions */
+button, a, .menu-toggle {
+    touch-action: manipulation;
 }
 </style>
 {% endblock %}

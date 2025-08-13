@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +12,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='add form.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
     <!-- Header with Brand and Toggle Button -->
     <header class="header">
@@ -24,15 +26,15 @@
             </a>
         </div>
         {% if session.user_id %}
-            <div class="header-right">
-                <span class="navbar-text">Welcome, {{ session.user_name }}</span>
-                <a class="btn btn-outline-primary" href="{{ url_for('logout') }}">Logout</a>
-            </div>
+        <div class="header-right">
+            <span class="navbar-text">Welcome, {{ session.user_name }}</span>
+            <a class="btn btn-outline-primary" href="{{ url_for('logout') }}">Logout</a>
+        </div>
         {% else %}
-            <div class="header-right">
-                <a class="btn btn-outline-primary me-2" href="{{ url_for('login') }}">Login</a>
-                <a class="btn btn-outline-primary" href="{{ url_for('register') }}">Register</a>
-            </div>
+        <div class="header-right">
+            <a class="btn btn-outline-primary me-2" href="{{ url_for('login') }}">Login</a>
+            <a class="btn btn-outline-primary" href="{{ url_for('register') }}">Register</a>
+        </div>
         {% endif %}
     </header>
 
@@ -42,33 +44,41 @@
         <nav class="sidebar">
             <ul class="nav flex-column">
                 {% if session.user_id %}
-                    {% if session.role == 'admin' %}
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">Dashboard</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'customers' %}active{% endif %}" href="{{ url_for('customers') }}">Customers</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'employees' %}active{% endif %}" href="{{ url_for('employees') }}">Employees</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'leads' %}active{% endif %}" href="{{ url_for('leads') }}">Leads</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'status_changes' %}active{% endif %}" href="{{ url_for('status_changes') }}">Status Changes</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'logs' %}active{% endif %}" href="{{ url_for('logs') }}">Logs</a>
-                        </li>
-                    {% elif session.role == 'employee' %}
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'leads' %}active{% endif %}" href="{{ url_for('leads') }}">Leads</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}" href="{{ url_for('profile') }}">Profile Details</a>
-                        </li>
-                    {% endif %}
+                {% if session.role == 'admin' %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}"
+                        href="{{ url_for('dashboard') }}">Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'customers' %}active{% endif %}"
+                        href="{{ url_for('customers') }}">Customers</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'employees' %}active{% endif %}"
+                        href="{{ url_for('employees') }}">Employees</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'leads' %}active{% endif %}"
+                        href="{{ url_for('leads') }}">Leads</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'status_changes' %}active{% endif %}"
+                        href="{{ url_for('status_changes') }}">Status Changes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'logs' %}active{% endif %}"
+                        href="{{ url_for('logs') }}">Logs</a>
+                </li>
+                {% elif session.role == 'employee' %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'leads' %}active{% endif %}"
+                        href="{{ url_for('leads') }}">Leads</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}"
+                        href="{{ url_for('profile') }}">Profile Details</a>
+                </li>
+                {% endif %}
                 {% endif %}
             </ul>
         </nav>
@@ -78,21 +88,45 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <div class="container">
+            <div class="container py-5">
                 {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+                {% endif %}
                 {% endwith %}
+
                 {% block content %}
+                <section class="bg-light p-5 rounded-4 shadow-sm mx-auto" style="max-width: 900px;">
+                    <h1 class="display-5 fw-semibold text-primary mb-4 text-center">
+                        Welcome to Pacific Trips
+                    </h1>
+                    <p class="lead text-muted mb-4" style="line-height: 1.8;">
+                        Pacific Trips is a premier tourism company based in Pakistan, committed to showcasing the
+                        breathtaking beauty and rich culture of the country. Our team of passionate travel experts
+                        specializes in organizing unique, immersive, and memorable travel experiences that cater to the
+                        diverse interests of our clients.
+                    </p>
+                    <p class="lead text-muted mb-5" style="line-height: 1.8;">
+                        From solo wanderers and thrill-seekers to families and corporations, Pacific Trips designs
+                        journeys that go beyond sightseeing, offering meaningful encounters with nature, culture, and
+                        local communities.
+                    </p>
+                    <div class="d-flex justify-content-center">
+                        <a href="{{ url_for('leads') }}" class="btn btn-lg btn-primary px-5 shadow-sm"
+                            style="letter-spacing: 0.05em;">
+                            Explore Leads
+                        </a>
+                    </div>
+                </section>
                 {% endblock %}
             </div>
         </main>
+
     </div>
 
     <footer class="footer">
@@ -136,4 +170,5 @@
         });
     </script>
 </body>
+
 </html>
