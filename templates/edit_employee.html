@@ -1,24 +1,37 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Edit Employee</h2>
-<form method="POST" action="{{ url_for('edit_employee', emp_id=employee.empId) }}" class="form-container">
-    <label for="empId">Employee ID</label>
-    <input type="text" name="empId" value="{{ employee.empId }}" readonly>
+<h2 style="text-align: center; color: #2c3e50; margin-bottom: 24px;">Edit Employee</h2>
+<form method="POST" action="{{ url_for('edit_employee', emp_id=employee.empId) }}" 
+      style="max-width: 480px; margin: 0 auto; padding: 20px; background: #f9f9f9; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+  
+    <label for="empId" style="display: block; font-weight: 600; margin-bottom: 6px; color: #34495e;">Employee ID</label>
+    <input type="text" name="empId" value="{{ employee.empId }}" readonly 
+           style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; background: #e9ecef; color: #495057;">
 
-    <label for="empName">Name</label>
-    <input type="text" name="empName" value="{{ employee.empName }}" required>
+    <label for="empName" style="display: block; font-weight: 600; margin-bottom: 6px; color: #34495e;">Name</label>
+    <input type="text" name="empName" value="{{ employee.empName }}" required
+           style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px;">
 
-    <label for="phoneNo">Phone Number</label>
-    <input type="text" name="phoneNo" value="{{ employee.phoneNo or '' }}">
+    <label for="phoneNo" style="display: block; font-weight: 600; margin-bottom: 6px; color: #34495e;">Phone Number</label>
+    <input type="text" name="phoneNo" value="{{ employee.phoneNo or '' }}" 
+           style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px;">
 
-    <label for="targetAmount">Target Amount</label>
-    <input type="number" name="targetAmount" value="{{ employee.targetAmount }}" required>
+    <label for="targetAmount" style="display: block; font-weight: 600; margin-bottom: 6px; color: #34495e;">Target Amount</label>
+    <input type="number" name="targetAmount" value="{{ employee.targetAmount }}" required
+           style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px;">
 
-    <label for="achievedAmount">Achieved Amount</label>
-    <input type="number" name="achievedAmount" value="{{ employee.achievedAmount }}" required>
+    <label for="achievedAmount" style="display: block; font-weight: 600; margin-bottom: 6px; color: #34495e;">Achieved Amount</label>
+    <input type="number" name="achievedAmount" value="{{ employee.achievedAmount }}" required
+           style="width: 100%; padding: 10px; margin-bottom: 24px; border: 1px solid #ccc; border-radius: 4px;">
 
-    <button type="submit" class="btn">Update</button>
-    <a href="{{ url_for('employees') }}" class="btn danger">Cancel</a>
+    <button type="submit" 
+            style="background-color: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; margin-right: 12px;">
+      Update
+    </button>
+    <a href="{{ url_for('employees') }}" 
+       style="background-color: #dc3545; color: white; padding: 12px 20px; border-radius: 4px; text-decoration: none; font-weight: 600;">
+      Cancel
+    </a>
 </form>
 {% endblock %}
